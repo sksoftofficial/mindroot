@@ -8,7 +8,7 @@
 <title>Mindroot</title>
 <style>
   :root { --bg:#1e1e1e; --bg2:#161616; --bg3:#2b2b2b; --hover:#303030; --fg:#dcddde; --dim:#999; --accent:#e9973f; --accent-strong:#d97721; --accent-soft:#442f20; --danger:#ff6b6b; --ok:#53c59f; --border:rgba(255,255,255,.055); --border-soft:rgba(255,255,255,.03); --border-hover:rgba(255,255,255,.11); --border-accent:rgba(233,151,63,.22); }
-  * { box-sizing:border-box; margin:0; padding:0; }
+  * { box-sizing:border-box; margin:0; padding:0; outline:none !important; }
   * { scrollbar-width:thin; scrollbar-color:#505050 transparent }
   *::-webkit-scrollbar { width:10px; height:10px }
   *::-webkit-scrollbar-track { background:transparent }
@@ -26,7 +26,6 @@
   header .spacer { flex:1 }
   .header-lock { padding:5px 10px; display:flex; align-items:center; gap:7px; font-size:12px; color:var(--dim); background:transparent; border-color:transparent; transition:background-color 120ms ease-out, border-color 120ms ease-out, color 120ms ease-out }
   .header-lock:hover { color:var(--fg); background:#ffffff0c; border-color:#ffffff40 }
-  .header-lock:focus-visible { outline:2px solid var(--accent); outline-offset:2px }
   .header-lock svg { width:16px; height:16px; stroke:currentColor }
   .header-lock-label { font-size:12px }
   button { background:var(--bg3); color:var(--fg); border:1px solid var(--border); border-radius:5px; padding:5px 10px; cursor:pointer; font:inherit; }
@@ -35,30 +34,18 @@
   button.primary:hover { background:#e58732; border-color:#e58732 }
   button.danger { color:var(--danger) }
   input, textarea { background:#242424; color:var(--fg); border:1px solid var(--border); border-radius:5px; padding:6px 9px; font:inherit }
-  input:focus, textarea:focus { outline:none; border-color:rgba(233,151,63,.68); box-shadow:0 0 0 2px rgba(233,151,63,.12) }
+  input:focus, textarea:focus { outline:none; }
   #gate { margin:auto; text-align:center; display:flex; flex-direction:column; gap:14px; width:min(420px, calc(100% - 32px)); padding:28px; background:var(--bg2); border:1px solid var(--border); border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.28) }
   #gate input { width:100% }
   main { display:flex; flex:1 }
   aside { position:relative; z-index:1; width:230px; background:var(--bg2); border-right:1px solid var(--border-soft); padding:10px 14px; box-shadow:8px 0 20px rgba(0,0,0,.12); display:flex; flex-direction:column; gap:8px; transition:width 160ms ease-out }
-  .sidebar-toggle { flex:none; height:34px; padding:0; display:flex; align-items:center; justify-content:center }
-  .sidebar-toggle svg { width:17px; height:17px; stroke:currentColor; transition:transform 160ms ease-out }
   .sidebar-item { width:100%; display:flex; align-items:center; gap:9px; padding:8px 10px; text-align:left; color:var(--dim); background:transparent; border-color:transparent; white-space:nowrap }
   .sidebar-item svg { width:17px; height:17px; flex:none; stroke:currentColor }
   .sidebar-item.active { background:var(--accent-soft); color:#f2b46f }
-  .sidebar-item:focus-visible, .proj:focus-visible { outline:2px solid var(--accent); outline-offset:-2px }
   .sidebar-item .menu-chevron { margin-left:auto; width:13px; transition:transform 160ms ease-out }
   .sidebar-item[aria-expanded="true"] .menu-chevron { transform:rotate(90deg) }
   #projectMenu { min-width:0 }
   #projList[hidden] { display:none }
-  @media (min-width:701px) {
-    aside.collapsed { width:56px; padding:10px 12px }
-    aside.collapsed .sidebar-toggle svg { transform:rotate(180deg) }
-    aside.collapsed .sidebar-item { padding:8px 0; justify-content:center }
-    aside.collapsed .sidebar-label, aside.collapsed .menu-chevron { display:none }
-    aside.collapsed #projList { margin-left:0; padding-left:0; border-left:0 }
-    aside.collapsed .proj { padding:7px 0; text-align:center; font-size:0 }
-    aside.collapsed .proj::before { content:attr(data-initial); font-size:12px; line-height:inherit }
-  }
   #projList { display:flex; flex-direction:column; gap:2px; margin:4px 0 0 18px; padding-left:8px; border-left:1px solid var(--border) }
   .proj { padding:7px 10px; border-radius:5px; cursor:pointer; color:var(--dim); background:transparent; border:0; text-align:left; overflow-wrap:anywhere }
   .proj:hover { background:var(--hover); color:var(--fg) }
@@ -84,9 +71,8 @@
   .graph-controls { position:absolute; bottom:14px; left:14px; display:flex; gap:5px }
   .graph-controls button { min-width:34px }
   .graph-hint { color:var(--dim); font-size:11px; flex:none }
-  .graph-view button:focus-visible, .tab:focus-visible { outline:2px solid var(--accent); outline-offset:2px }
   .docrow { padding:11px 12px; border:1px solid var(--border); border-radius:7px; margin-bottom:8px; cursor:pointer; background:#242424 }
-  .docrow:hover { background:#282828; border-color:var(--border-hover) }
+  .docrow:hover { background:#282828; }
   .doc-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:5px }
   .docrow .t { color:var(--fg); font-weight:600 }
   .docrow .p { color:var(--dim); font-size:12px }
@@ -173,7 +159,6 @@
     .workspace-head { align-items:flex-start; flex-wrap:wrap; gap:8px; margin-bottom:12px; padding-bottom:10px }
     button, input, select { min-height:44px; touch-action:manipulation }
     .header-lock, .back-button { width:44px; height:44px }
-    .sidebar-toggle { display:none }
     .proj, .tab { min-height:44px; display:flex; align-items:center }
     .tab { padding:5px 8px }
     .delete-project { padding:5px 9px }
@@ -190,7 +175,6 @@
   :root { color-scheme:dark; --border:rgba(255,255,255,.08); --dim:#a3a3a3 }
   button, input, textarea, select { border-radius:8px }
   button { transition:background-color 140ms, border-color 140ms }
-  button:focus-visible, input:focus-visible, select:focus-visible { outline:2px solid var(--accent); outline-offset:3px }
   header { box-shadow:none; border-bottom:1px solid var(--border) }
   .brand { min-width:214px; gap:11px }
   .brand-mark { width:38px; height:38px; background:none; border:0; box-shadow:none }
@@ -198,9 +182,11 @@
   header h1 { font-size:20px; letter-spacing:-.04em }
   .brand-subtitle { font-size:10px; margin-top:4px; color:var(--dim) }
   aside { width:252px; padding:18px 14px; box-shadow:none; border-right:1px solid var(--border); gap:0 }
-  .sidebar-toggle { position:absolute; top:18px; right:14px; z-index:1; width:30px; height:32px; background:transparent; border-color:transparent }
   #projectMenu { display:flex; flex-direction:column; min-height:0 }
-  .sidebar-item { font-size:11px; text-transform:uppercase; letter-spacing:.09em; font-weight:600; padding:8px 42px 8px 8px; flex:none }
+  .sidebar-item { position:relative; font-size:11px; text-transform:uppercase; letter-spacing:.09em; font-weight:600; padding:9px 12px; min-height:40px; flex:none; border:0; border-radius:6px }
+  .sidebar-item:hover { background:var(--hover); color:var(--fg) }
+  .sidebar-item.active { background:#ffffff08; color:var(--fg) }
+  .sidebar-item.active::after { content:""; position:absolute; left:0; top:0; bottom:0; width:2px; border-radius:2px; background:var(--accent) }
   .project-search { width:100%; margin:10px 0 14px; padding:9px 11px; font-size:12px; background:#ffffff04; border-color:transparent }
   .project-search:focus { border-color:transparent; background:#ffffff08; box-shadow:none }
   #projList { margin:0; padding:0 4px 0 0; border:0; gap:3px; min-height:0 }
@@ -236,7 +222,7 @@
   .collection-grid .collection-toolbar, .collection-grid .empty { grid-column:1 / -1 }
   .collection-grid .collection-toolbar { margin-bottom:0 }
   .docrow { display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; width:100%; text-align:left; padding:22px; margin-bottom:0; border-radius:10px; background:#242424; position:relative }
-  .docrow:hover { border-color:var(--border-accent); background:#282623 }
+  .docrow:hover { background:#282623 }
   .doc-head { align-items:center; margin-bottom:10px }
   .docrow .t { font-size:15px; letter-spacing:-.015em; overflow-wrap:anywhere }
   .docrow .p { flex:none; font-size:11px }
@@ -273,15 +259,6 @@
   textarea.editor:focus { border-color:var(--border); box-shadow:none; outline:none }
   .graph-workspace { border-radius:10px }
   .proj[hidden], .docrow[hidden], .rem[hidden], .empty[hidden] { display:none }
-  @media (min-width:701px) {
-    aside.collapsed { width:64px; padding:62px 8px 18px }
-    aside.collapsed .sidebar-toggle { right:17px }
-    aside.collapsed .project-search, aside.collapsed .project-name, aside.collapsed .sidebar-item { display:none }
-    aside.collapsed #projList { padding:0; gap:6px }
-    aside.collapsed #projList[hidden] { display:flex }
-    aside.collapsed .proj { justify-content:center; padding:10px 0; min-height:44px }
-    aside.collapsed .proj::before { font-size:11px }
-  }
   @media (min-width:1600px) { #content { padding-left:max(38px,calc((100vw - 1600px)/2)); padding-right:max(38px,calc((100vw - 1600px)/2)) } }
   @media (max-width:1000px) { #content { padding:24px } aside { width:220px } .brand { min-width:182px } .collection-grid { grid-template-columns:1fr } }
   @media (max-width:700px) {
@@ -293,7 +270,6 @@
     .mobile-project-picker { display:flex; align-items:center; gap:16px; min-width:0 }
     .mobile-project-picker span { font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--dim); flex:none }
     .mobile-project-picker select { flex:1; min-width:0; width:0; background:var(--bg2); color:var(--fg); border:0; padding:8px; font:inherit; font-size:13px; min-height:44px }
-    .sidebar-toggle { display:none }
     .project-search { margin:4px 0 8px; padding:6px 10px }
     #projList { margin:0; gap:5px; overflow-y:hidden; padding:0 }
     #content { padding:20px 16px 16px }
@@ -318,6 +294,78 @@
     .editor-actions { gap:5px }
     .editor-actions button { min-height:44px; padding:7px 10px }
   }
+  .home-link { margin-bottom:12px }
+  body:has(#app.home-active), body:has(#app.graph-active) { height:100dvh; min-height:0; overflow:hidden }
+  #app.home-active, #app.graph-active { min-height:0 }
+  #app.home-active > aside, #app.graph-active > aside { overflow-y:auto; overflow-x:hidden; flex-shrink:0 }
+  #app.graph-active #content { overflow:auto; padding-bottom:0 }
+  .project-graph-view { gap:0; min-height:350px }
+  .project-graph-view .graph-workspace { min-height:260px; border:0; border-radius:0 }
+  .project-graph-view .brain-footer { padding:18px 0 }
+  .project-graph-view .graph-legend { top:auto; bottom:24px; left:0; font-size:10px }
+  :root { --bg:#17191b; --bg2:#151719; --bg3:#252a2d; --hover:#2b3236 }
+  #content { background:radial-gradient(ellipse at 55% 47%,#162329 0%,#151a1d 37%,#17191b 70%); }
+  #content.home-content { padding:0; overflow:auto }
+  .collection-toolbar { background:transparent }
+  .docrow, .rem, .md { background:#ffffff03 }
+  .docrow:hover { background:#ffffff06 }
+  .graph-workspace { background:transparent; border-color:#ffffff0a }
+  .graph-legend { color:#889498 }
+  .graph-legend i { background:#efffff }
+  .graph-legend .memory-dot { background:#acf0ff }
+  .graph-controls button { background:#ffffff04; color:#b9c2c5; border-color:#ffffff0b }
+  .graph-controls button:hover { background:#ffffff09 }
+  .home-loading { display:grid; place-items:center; color:var(--dim); font-size:12px; letter-spacing:.02em }
+  .brain-view { gap:0; min-height:480px }
+  .brain-heading { display:flex; align-items:center; justify-content:space-between; gap:32px; padding:32px 40px 8px; flex:none }
+  .brain-eyebrow { display:block; color:#8b9295; font-size:10px; letter-spacing:.16em; text-transform:uppercase; margin-bottom:8px }
+  .brain-title h2 { color:#e9e9e5; font-size:30px; font-weight:500; line-height:1.2; letter-spacing:-.045em; text-transform:none; margin:0 }
+  .brain-title p { color:#8b9295; font-size:12px; margin-top:10px }
+  .brain-stats { display:flex; gap:30px; flex:none }
+  .brain-stats > div { display:flex; flex-direction:column-reverse; gap:4px }
+  .brain-stats dt { color:#8b9295; font-size:11px }
+  .brain-stats dd { color:#d1d9dc; font-size:22px; font-weight:400; letter-spacing:-.035em; font-variant-numeric:tabular-nums }
+  .brain-view .graph-workspace { min-height:280px; border:0; border-radius:0; background:transparent }
+  .brain-view .graph-legend { top:auto; bottom:24px; left:40px; color:#889498; font-size:10px; gap:14px }
+  .brain-view .graph-legend i { width:5px; height:5px; background:#efffff }
+  .brain-view .graph-legend .memory-dot { width:4px; height:4px; background:#91dfff }
+  .brain-interaction-hint { position:absolute; bottom:22px; left:50%; transform:translateX(-50%); color:#778387; font-size:10px; white-space:nowrap; pointer-events:none }
+  .brain-footer { flex:none; display:flex; align-items:center; justify-content:space-between; gap:20px; padding:18px 40px; border-top:1px solid #ffffff07 }
+  .brain-provenance { display:flex; align-items:center; gap:8px; color:#889498; font-size:11px }
+  .brain-status-dot { width:5px; height:5px; border-radius:50%; background:#85ada3; flex:none }
+  .brain-actions { display:flex; align-items:center; gap:16px; min-width:0 }
+  .brain-project-picker { max-width:220px; min-width:0; background:#ffffff04; color:#b9c2c5; border:1px solid #ffffff0b; padding:8px 28px 8px 12px; font:inherit; font-size:11px; cursor:pointer }
+  .brain-project-picker option { background:#1c2124; color:#dcddde }
+  .graph-view .graph-controls { position:static; gap:0; border:1px solid #ffffff0b; border-radius:8px; overflow:hidden; flex:none }
+  .graph-view .graph-controls button { min-width:34px; min-height:34px; background:transparent; color:#b9c2c5; border:0; border-radius:0 }
+  .graph-view .graph-controls button + button { border-left:1px solid #ffffff0b }
+  .graph-view .graph-controls button:hover, .brain-project-picker:hover { background:#ffffff09 }
+  .brain-view > .empty { margin:40px; flex:1; display:grid; place-items:center; color:var(--dim); font-size:13px }
+  @media (max-width:1000px) {
+    .brain-heading { padding:28px 24px 8px; gap:20px }
+    .brain-stats { gap:18px }
+    .brain-footer { padding:16px 24px }
+    .brain-gesture { display:none }
+    .brain-view .graph-legend { left:24px }
+    .brain-interaction-hint { left:auto; right:24px; transform:none }
+  }
+  @media (max-width:700px) {
+    .brain-view { min-height:510px }
+    .brain-heading { flex-wrap:wrap; gap:22px; padding:24px 24px 4px }
+    .brain-title h2 { font-size:28px }
+    .brain-title p { display:none }
+    .brain-stats { width:100%; justify-content:space-between; padding-right:24px }
+    .brain-stats dd { font-size:20px }
+    .brain-stats dt { font-size:10px }
+    .brain-view .graph-workspace { min-height:260px }
+    .brain-view .graph-legend { bottom:12px }
+    .brain-interaction-hint { display:none }
+    .brain-footer { flex-wrap:wrap; gap:12px; padding:14px 24px 20px }
+    .brain-provenance { font-size:10px }
+    .brain-actions { width:100%; justify-content:space-between }
+    .brain-project-picker { flex:1; max-width:none; min-height:44px }
+    .graph-view .graph-controls button { min-width:44px; min-height:44px }
+  }
   @media (prefers-reduced-motion:reduce) { *, *::before, *::after { transition:none !important } }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
@@ -331,7 +379,7 @@
     </span>
     <div class="brand-copy">
       <h1>mindroot</h1>
-      <span class="brand-subtitle">Persistent memory</span>
+      <span class="brand-subtitle">Your second brain</span>
     </div>
   </div>
   <div class="spacer"></div>
@@ -355,12 +403,11 @@
 <main id="app" style="display:none">
   <aside>
     <label class="mobile-project-picker"><span>Project</span><select id="mobileProject" aria-label="Choose project" onchange="selectProject(this.value)"></select></label>
-    <button class="sidebar-toggle" type="button" title="Shrink menu" aria-label="Shrink menu" aria-expanded="true" onclick="toggleSidebar()">
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="m14 7-5 5 5 5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </button>
     <div id="projectMenu">
+      <button class="sidebar-item home-link" id="homeLink" type="button" title="The Atlas" aria-label="The Atlas" onclick="navTo('#/')">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 10.8 V21 M12 15 l-4.8 3.6 M12 15 l4.8 3.6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 12.6 C6 12.6 3 9 3.6 4.2 c4.8 -.6 8.4 2.4 8.4 8.4 Z" stroke-width="1.6" stroke-linejoin="round"/><path d="M13.2 10.2 C13.2 5.4 16.2 2.4 21 3 c0 4.8 -3 7.8 -7.8 7.2 Z" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        <span class="sidebar-label">The Atlas</span>
+      </button>
       <button class="sidebar-item" id="projectMenuToggle" type="button" title="Projects" aria-label="Projects" aria-expanded="true" aria-controls="projList" onclick="toggleProjectMenu()">
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 7h7l2 2h9v11H3zM3 7V4h7l2 3" stroke-width="1.7" stroke-linejoin="round"/></svg>
         <span class="sidebar-label">Projects</span>
@@ -398,6 +445,8 @@ async function api(method, url, body) {
 function showGate(msg) {
   disposeGraph?.();
   disposeGraph = null;
+  $("#content").replaceChildren();
+  $("#app").classList.remove("home-active", "graph-active");
   $("#app").style.display = "none";
   $("#gate").style.display = "flex";
   if (msg) $("#gateErr").textContent = msg;
@@ -419,9 +468,8 @@ async function boot() {
     $("#app").style.display = "flex";
     const projects = await renderProjects();
     const r = routeFromHash();
-    if (projects.some((p) => p.slug === r.slug)) applyRoute(r);
-    else if (projects.length) navTo("#/" + encodeURIComponent(projects[0].slug) + "/notes");
-    else applyRoute(r);
+    if (!r.slug || projects.some((p) => p.slug === r.slug)) applyRoute(r);
+    else navTo("#/");
   } catch (e) {
     if (e.message !== "unauthorized") showGate(String(e));
   }
@@ -454,6 +502,9 @@ function applyRoute({ slug = null, tab = "notes", doc = null } = {}) {
   $("#mobileProject").value = slug || "";
   currentTab = tab;
   currentDoc = doc;
+  $("#homeLink").classList.toggle("active", !slug);
+  if (!slug) $("#homeLink").setAttribute("aria-current", "page");
+  else $("#homeLink").removeAttribute("aria-current");
   document.querySelectorAll(".proj").forEach((n) => {
     n.classList.toggle("active", n.dataset.slug === slug);
     if (n.dataset.slug === slug) n.setAttribute("aria-current", "page");
@@ -461,8 +512,7 @@ function applyRoute({ slug = null, tab = "notes", doc = null } = {}) {
   });
   if (slug) setProjectMenu(true);
   if (!slug) {
-    const c = $("#content");
-    c.innerHTML = '<div class="view"><div class="empty">No projects yet. Agents create them automatically on first write.</div></div>';
+    renderHome();
     return;
   }
   renderTabs();
@@ -473,10 +523,8 @@ window.addEventListener("hashchange", () => applyRoute(routeFromHash()));
 async function renderProjects() {
   const rows = await api("GET", "/api/projects");
   const picker = $("#mobileProject");
-  picker.replaceChildren(...rows.map((r) => new Option(r.slug, r.slug)));
-  picker.disabled = !rows.length;
-  if (!rows.length) picker.add(new Option("No projects yet", ""));
-  if (currentProject) picker.value = currentProject;
+  picker.replaceChildren(new Option("Home · All projects", ""), ...rows.map((r) => new Option(r.slug, r.slug)));
+  picker.value = currentProject || "";
   const el = $("#projList");
   el.innerHTML = "";
   for (const r of rows) {
@@ -507,7 +555,47 @@ function filterProjects() {
 }
 
 function selectProject(slug) {
-  navTo(routeUrl(slug, "notes"));
+  navTo(slug ? routeUrl(slug, "notes") : "#/");
+}
+
+async function renderHome() {
+  const c = $("#content");
+  c.classList.add("home-content");
+  $("#app").classList.remove("graph-active");
+  $("#app").classList.add("home-active");
+  c.replaceChildren();
+  const view = document.createElement("div");
+  view.className = "view home-loading";
+  view.innerHTML = '<div role="status">Gathering your memories…</div>';
+  c.append(view);
+  try {
+    const projects = await api("GET", "/api/projects");
+    if (!view.isConnected) return;
+    const entries = new Array(projects.length);
+    let next = 0;
+    // Bound concurrency so a large workspace does not flood the server.
+    await Promise.all(Array.from({ length: Math.min(4, projects.length) }, async () => {
+      while (next < projects.length && view.isConnected) {
+        const index = next++;
+        const { slug } = projects[index];
+        entries[index] = { slug, data: await api("GET", "/api/projects/" + encodeURIComponent(slug)) };
+      }
+    }));
+    if (!view.isConnected || $("#app").style.display === "none") return;
+    const { mountGraph } = await import("/graph.js");
+    if (!view.isConnected) return;
+    const dispose = await mountGraph(view, entries, { brain: true, openProject: (slug) => navTo(routeUrl(slug, "graph")) });
+    if (!view.isConnected) dispose?.();
+    else disposeGraph = dispose;
+  } catch (e) {
+    if (!view.isConnected) return;
+    view.innerHTML = '<div class="empty err"></div>';
+    view.firstChild.textContent = "Unable to load the brain: " + e.message;
+    const retry = document.createElement("button");
+    retry.textContent = "Try again";
+    retry.onclick = () => navTo("#/");
+    view.append(retry);
+  }
 }
 
 function renderTabs() {
@@ -515,6 +603,9 @@ function renderTabs() {
   disposeGraph?.();
   disposeGraph = null;
   const c = $("#content");
+  c.classList.remove("home-content");
+  $("#app").classList.remove("home-active");
+  $("#app").classList.toggle("graph-active", currentTab === "graph");
   c.innerHTML = "";
   if (!(["notes", "skills"].includes(currentTab) && currentDoc !== null)) {
     const intro = document.createElement("div");
@@ -630,25 +721,6 @@ function addCollectionToolbar(view, label, count) {
 }
 
 let mdMode = localStorage.getItem("mindroot_mdmode") || "preview";
-
-let sidebarCollapsed = localStorage.getItem("mindroot_sidebar") === "collapsed";
-function toggleSidebar() { setSidebar(!sidebarCollapsed); }
-function setSidebar(collapsed) {
-  sidebarCollapsed = collapsed;
-  if (collapsed) { $(".project-search").value = ""; filterProjects(); }
-  localStorage.setItem("mindroot_sidebar", collapsed ? "collapsed" : "expanded");
-  applySidebar();
-}
-function applySidebar() {
-  const aside = document.querySelector("main aside");
-  const btn = $(".sidebar-toggle");
-  aside.classList.toggle("collapsed", sidebarCollapsed);
-  btn.setAttribute("aria-expanded", String(!sidebarCollapsed));
-  const label = sidebarCollapsed ? "Expand menu" : "Shrink menu";
-  btn.title = label;
-  btn.setAttribute("aria-label", label);
-}
-applySidebar();
 
 let projectMenuExpanded = localStorage.getItem("mindroot_project_menu") !== "collapsed";
 function toggleProjectMenu() { setProjectMenu(!projectMenuExpanded); }
