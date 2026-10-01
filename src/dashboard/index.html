@@ -15,8 +15,8 @@
   *::-webkit-scrollbar-thumb { background:#484848; border:2px solid transparent; border-radius:999px; background-clip:padding-box }
   *::-webkit-scrollbar-thumb:hover { background:#606060; border:2px solid transparent; background-clip:padding-box }
   *::-webkit-scrollbar-corner { background:transparent }
-  body { font:14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:var(--bg); color:var(--fg); height:100vh; height:100dvh; display:flex; flex-direction:column; }
-  header { position:relative; z-index:2; height:74px; flex:none; display:flex; align-items:center; gap:18px; padding:18px 14px; background:var(--bg2); border-bottom:1px solid var(--border-soft); box-shadow:0 8px 20px rgba(0,0,0,.14); }
+  body { font:14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:var(--bg); color:var(--fg); min-height:100vh; min-height:100dvh; display:flex; flex-direction:column; }
+  header { position:relative; z-index:2; flex:none; display:flex; align-items:center; gap:18px; padding:12px 24px; background:var(--bg2); border-bottom:1px solid var(--border-soft); box-shadow:0 8px 20px rgba(0,0,0,.14); }
   .brand { display:flex; align-items:center; gap:10px; min-width:0 }
   .brand-mark { width:36px; height:36px; flex:none; display:grid; place-items:center; background:#211c19; border:1px solid rgba(233,151,63,.14); border-radius:8px; box-shadow:0 1px 2px rgba(0,0,0,.3), inset 0 1px rgba(255,255,255,.025) }
   .brand-logo { width:26px; height:26px; object-fit:contain; flex:none }
@@ -24,8 +24,8 @@
   header h1 { font-size:15px; font-weight:680; letter-spacing:-.015em; color:var(--fg); }
   .brand-subtitle { display:block; margin-top:3px; color:#aaa; font-size:11px; white-space:nowrap }
   header .spacer { flex:1 }
-  .header-lock { height:34px; padding:0 10px; display:flex; align-items:center; gap:7px; color:#aaa; background:transparent; transition:background-color 120ms ease-out, border-color 120ms ease-out, color 120ms ease-out }
-  .header-lock:hover { color:var(--fg); background:var(--hover) }
+  .header-lock { padding:5px 10px; display:flex; align-items:center; gap:7px; font-size:12px; color:var(--dim); background:transparent; border-color:transparent; transition:background-color 120ms ease-out, border-color 120ms ease-out, color 120ms ease-out }
+  .header-lock:hover { color:var(--fg); background:#ffffff0c; border-color:#ffffff40 }
   .header-lock:focus-visible { outline:2px solid var(--accent); outline-offset:2px }
   .header-lock svg { width:16px; height:16px; stroke:currentColor }
   .header-lock-label { font-size:12px }
@@ -38,8 +38,8 @@
   input:focus, textarea:focus { outline:none; border-color:rgba(233,151,63,.68); box-shadow:0 0 0 2px rgba(233,151,63,.12) }
   #gate { margin:auto; text-align:center; display:flex; flex-direction:column; gap:14px; width:min(420px, calc(100% - 32px)); padding:28px; background:var(--bg2); border:1px solid var(--border); border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.28) }
   #gate input { width:100% }
-  main { display:flex; flex:1; overflow:hidden }
-  aside { position:relative; z-index:1; width:230px; background:var(--bg2); border-right:1px solid var(--border-soft); overflow-y:auto; padding:10px 14px; box-shadow:8px 0 20px rgba(0,0,0,.12); display:flex; flex-direction:column; gap:8px; transition:width 160ms ease-out }
+  main { display:flex; flex:1 }
+  aside { position:relative; z-index:1; width:230px; background:var(--bg2); border-right:1px solid var(--border-soft); padding:10px 14px; box-shadow:8px 0 20px rgba(0,0,0,.12); display:flex; flex-direction:column; gap:8px; transition:width 160ms ease-out }
   .sidebar-toggle { flex:none; height:34px; padding:0; display:flex; align-items:center; justify-content:center }
   .sidebar-toggle svg { width:17px; height:17px; stroke:currentColor; transition:transform 160ms ease-out }
   .sidebar-item { width:100%; display:flex; align-items:center; gap:9px; padding:8px 10px; text-align:left; color:var(--dim); background:transparent; border-color:transparent; white-space:nowrap }
@@ -63,7 +63,7 @@
   .proj { padding:7px 10px; border-radius:5px; cursor:pointer; color:var(--dim); background:transparent; border:0; text-align:left; overflow-wrap:anywhere }
   .proj:hover { background:var(--hover); color:var(--fg) }
   .proj.active { background:var(--accent-soft); color:#f2b46f }
-  #content { flex:1; min-width:0; overflow:hidden; padding:18px 22px; display:flex; flex-direction:column }
+  #content { flex:1; min-width:0; padding:18px 22px; display:flex; flex-direction:column }
   .workspace-head { flex:none; display:flex; align-items:center; gap:12px; min-height:36px; margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid var(--border) }
   .tabs { display:flex; gap:4px; align-items:center }
   .tab { padding:5px 12px; border-radius:5px; cursor:pointer; color:var(--dim); border:1px solid transparent }
@@ -72,9 +72,9 @@
   .tab.active { color:#f2b46f; border-color:var(--border-accent); background:var(--accent-soft) }
   .project-actions { margin-left:auto; display:flex; align-items:center; gap:10px }
   .delete-project { white-space:nowrap }
-  .view { flex:1; min-height:0; overflow-y:auto; width:100% }
-  .graph-view { display:flex; flex-direction:column; gap:12px; overflow:hidden }
-  .graph-workspace { display:flex; flex:1; min-height:0; border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--bg2) }
+  .view { flex:1; min-height:0; width:100% }
+  .graph-view { display:flex; flex-direction:column; gap:12px }
+  .graph-workspace { display:flex; flex:1; min-height:500px; border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--bg2) }
   .graph-stage { position:relative; flex:1; min-width:0; overflow:hidden }
   .graph-canvas { position:absolute; inset:0; touch-action:none }
   .graph-legend { position:absolute; left:16px; top:14px; display:flex; gap:16px; color:var(--dim); font-size:12px; pointer-events:none }
@@ -113,7 +113,7 @@
   .err { color:var(--danger) }
   .empty { color:var(--dim); border:1px dashed var(--border); border-radius:7px; padding:28px 20px; text-align:center }
   h2 { font-size:13px; text-transform:uppercase; letter-spacing:.1em; color:var(--dim); margin:18px 0 10px }
-  .editor-view { display:flex; flex-direction:column; overflow:hidden; padding-right:0 }
+  .editor-view { display:flex; flex-direction:column; padding-right:0 }
   .editor-head { flex:none }
   .editorbar { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:14px; min-height:42px; margin-bottom:10px }
   .editor-identity, .editor-actions { display:flex; align-items:center; gap:8px; min-width:0 }
@@ -123,11 +123,11 @@
   .editor-title { max-width:320px; color:var(--fg); font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
   .editor-actions { justify-self:end }
   .viewmode { display:inline-flex; gap:24px }
-  .split { display:flex; flex:1; min-height:0; gap:12px; align-items:stretch }
-  .split textarea.editor { flex:1; height:100%; min-height:0; resize:none; overflow-y:auto }
-  .split.preview { display:block; overflow-y:auto }
+  .split { display:flex; flex:none; min-height:0; gap:12px; align-items:stretch }
+  .split textarea.editor { flex:1; height:auto; min-height:420px; resize:none; overflow-y:hidden; field-sizing:content }
+  .split.preview { display:block }
   .split.preview .md { width:100%; min-height:100%; overflow:visible }
-  .md { flex:1; overflow-y:auto; padding:24px 28px; border:1px solid var(--border); border-radius:7px; background:#242424; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif }
+  .md { flex:1; padding:24px 28px; border:1px solid var(--border); border-radius:7px; background:#242424; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif }
   .md h1, .md h2, .md h3, .md h4 { margin:18px 0 10px; line-height:1.3; color:var(--fg) }
   .md h1 { font-size:26px } .md h2 { font-size:20px } .md h3 { font-size:16px } .md h4 { font-size:14px }
   .md h2 { text-transform:none; letter-spacing:normal }
@@ -158,7 +158,7 @@
     .header-lock { min-width:44px; height:44px; justify-content:center }
   }
   @media (max-width:700px) {
-    header { gap:10px; padding:14px 10px }
+    header { gap:10px }
     .brand { gap:8px }
     .brand-mark { width:34px; height:34px }
     .brand-logo { width:24px; height:24px }
@@ -177,9 +177,7 @@
     .proj, .tab { min-height:44px; display:flex; align-items:center }
     .tab { padding:5px 8px }
     .delete-project { padding:5px 9px }
-    .graph-view { overflow-y:auto }
     .graph-workspace { min-height:300px }
-    .editor-view { overflow-y:auto }
     .editorbar { grid-template-columns:minmax(0,1fr) auto; gap:8px }
     .editor-title { max-width:180px }
     .viewmode { grid-column:1 / -1; grid-row:2; justify-self:center }
@@ -193,19 +191,19 @@
   button, input, textarea, select { border-radius:8px }
   button { transition:background-color 140ms, border-color 140ms }
   button:focus-visible, input:focus-visible, select:focus-visible { outline:2px solid var(--accent); outline-offset:3px }
-  header { height:76px; padding:16px 24px; box-shadow:none; border-bottom:1px solid var(--border) }
+  header { box-shadow:none; border-bottom:1px solid var(--border) }
   .brand { min-width:214px; gap:11px }
   .brand-mark { width:38px; height:38px; background:none; border:0; box-shadow:none }
   .brand-logo { width:38px; height:38px }
   header h1 { font-size:20px; letter-spacing:-.04em }
   .brand-subtitle { font-size:10px; margin-top:4px; color:var(--dim) }
-  aside { width:252px; padding:18px 14px; box-shadow:none; border-right:1px solid var(--border); gap:0; overflow:hidden }
+  aside { width:252px; padding:18px 14px; box-shadow:none; border-right:1px solid var(--border); gap:0 }
   .sidebar-toggle { position:absolute; top:18px; right:14px; z-index:1; width:30px; height:32px; background:transparent; border-color:transparent }
   #projectMenu { display:flex; flex-direction:column; min-height:0 }
   .sidebar-item { font-size:11px; text-transform:uppercase; letter-spacing:.09em; font-weight:600; padding:8px 42px 8px 8px; flex:none }
   .project-search { width:100%; margin:10px 0 14px; padding:9px 11px; font-size:12px; background:#ffffff04; border-color:transparent }
   .project-search:focus { border-color:transparent; background:#ffffff08; box-shadow:none }
-  #projList { margin:0; padding:0 4px 0 0; border:0; gap:3px; overflow-y:auto; min-height:0 }
+  #projList { margin:0; padding:0 4px 0 0; border:0; gap:3px; min-height:0 }
   .project-search { flex:none }
   .project-empty { padding:12px 8px; color:var(--dim); font-size:12px }
   .proj { position:relative; display:flex; align-items:center; gap:10px; padding:9px 12px; min-height:40px; flex:none; font-size:13px; border:0; border-radius:6px }
@@ -230,24 +228,25 @@
   .delete-project { border-color:transparent }
   .delete-project svg { display:none; width:16px; height:16px }
   .project-actions { padding-bottom:8px }
-  .collection-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:20px; position:sticky; top:0; z-index:1; background:var(--bg); padding-bottom:8px }
+  .collection-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:20px; background:var(--bg); padding-bottom:8px }
   .collection-toolbar h3 { font-size:14px; font-weight:600; display:flex; align-items:center; gap:9px }
   .collection-toolbar input { width:230px; font-size:12px; padding:8px 11px; background:var(--bg2) }
   .collection-count { font-size:11px; color:var(--dim); background:var(--bg3); padding:1px 7px; border-radius:5px; font-variant-numeric:tabular-nums }
   .collection-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-rows:max-content; gap:14px; align-content:start }
   .collection-grid .collection-toolbar, .collection-grid .empty { grid-column:1 / -1 }
-  .collection-grid .collection-toolbar { margin-bottom:6px }
+  .collection-grid .collection-toolbar { margin-bottom:0 }
   .docrow { display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; width:100%; text-align:left; padding:22px; margin-bottom:0; border-radius:10px; background:#242424; position:relative }
   .docrow:hover { border-color:var(--border-accent); background:#282623 }
   .doc-head { align-items:center; margin-bottom:10px }
   .docrow .t { font-size:15px; letter-spacing:-.015em; overflow-wrap:anywhere }
   .docrow .p { flex:none; font-size:11px }
   .note-path { display:block; margin-bottom:18px; color:var(--dim); font:11px ui-monospace,monospace; overflow-wrap:anywhere }
+  .docrow .note-path + div { height:90px; overflow:hidden; flex:none }
   .sec-chip { background:#ffffff03; border:1px solid var(--border); font-size:11px; padding:2px 7px; margin:3px 4px 0 0; max-width:100%; overflow-wrap:anywhere }
   .skill-summary { line-height:1.8; font-size:13px }
   .rem { padding:20px 22px; border-radius:10px; gap:24px; margin-bottom:10px }
   .rem .txt { min-width:0; overflow-wrap:anywhere }
-  .txt-main { line-height:1.8; max-width:100ch; margin-bottom:8px }
+  .txt-main { line-height:1.8; margin-bottom:8px }
   .rem .meta { margin-top:8px; font-size:10px }
   .rem > button { border-color:transparent; color:var(--dim); width:32px; height:32px; padding:7px; flex:none; display:grid; place-items:center }
   .rem > button:hover, .rem > button:focus-visible { color:var(--danger) }
@@ -286,7 +285,7 @@
   @media (min-width:1600px) { #content { padding-left:max(38px,calc((100vw - 1600px)/2)); padding-right:max(38px,calc((100vw - 1600px)/2)) } }
   @media (max-width:1000px) { #content { padding:24px } aside { width:220px } .brand { min-width:182px } .collection-grid { grid-template-columns:1fr } }
   @media (max-width:700px) {
-    header { height:68px; padding:12px 16px; gap:12px }
+    header { gap:12px }
     .brand { min-width:0 } header h1 { font-size:18px }
     .brand-mark, .brand-logo { width:32px; height:32px }
     aside { width:100%; padding:4px 16px; max-height:none; gap:0 }
@@ -512,6 +511,7 @@ function selectProject(slug) {
 }
 
 function renderTabs() {
+  window.scrollTo(0, 0);
   disposeGraph?.();
   disposeGraph = null;
   const c = $("#content");
@@ -519,7 +519,7 @@ function renderTabs() {
   if (!(["notes", "skills"].includes(currentTab) && currentDoc !== null)) {
     const intro = document.createElement("div");
     intro.className = "workspace-intro";
-    intro.innerHTML = '<h2></h2><div class="eyebrow">Project workspace</div>';
+    intro.innerHTML = '<div class="eyebrow">Project workspace</div><h2></h2>';
     intro.querySelector("h2").textContent = currentProject;
     c.appendChild(intro);
     const head = document.createElement("div");
