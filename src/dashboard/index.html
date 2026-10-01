@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#161616">
-<link rel="icon" type="image/png" sizes="64x64" href="/favicon.png">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M20 18v17m0-10-8 6m8-6 8 6' fill='none' stroke='%23e9973f' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M20 21C10 21 5 15 6 7c8-1 14 4 14 14Z' fill='%23e9973f'/%3E%3Cpath d='M22 17C22 9 27 4 35 5c0 8-5 13-13 12Z' fill='%23f2bd7e'/%3E%3C/svg%3E">
 <title>Mindroot</title>
 <style>
   :root { --bg:#1e1e1e; --bg2:#161616; --bg3:#2b2b2b; --hover:#303030; --fg:#dcddde; --dim:#999; --accent:#e9973f; --accent-strong:#d97721; --accent-soft:#442f20; --danger:#ff6b6b; --ok:#53c59f; --border:rgba(255,255,255,.055); --border-soft:rgba(255,255,255,.03); --border-hover:rgba(255,255,255,.11); --border-accent:rgba(233,151,63,.22); }
@@ -23,11 +23,6 @@
   .brand-copy { min-width:0; line-height:1.15 }
   header h1 { font-size:15px; font-weight:680; letter-spacing:-.015em; color:var(--fg); }
   .brand-subtitle { display:block; margin-top:3px; color:#aaa; font-size:11px; white-space:nowrap }
-  .header-context { min-width:0; display:flex; align-items:center; gap:8px; color:var(--dim); font-size:12px }
-  .header-context[hidden] { display:none }
-  .header-divider { width:1px; height:24px; flex:none; background:var(--border-soft) }
-  .header-context svg { width:15px; height:15px; flex:none; stroke:currentColor }
-  #headerProject { max-width:280px; overflow:hidden; color:#b9b9b9; text-overflow:ellipsis; white-space:nowrap }
   header .spacer { flex:1 }
   .header-lock { height:34px; padding:0 10px; display:flex; align-items:center; gap:7px; color:#aaa; background:transparent; transition:background-color 120ms ease-out, border-color 120ms ease-out, color 120ms ease-out }
   .header-lock:hover { color:var(--fg); background:var(--hover) }
@@ -109,7 +104,7 @@
   button:disabled { opacity:.5; cursor:default }
   .skill-fields [hidden], .editor-head .viewmode[hidden] { display:none }
   .sec-chip { display:inline-block; background:var(--bg3); border-radius:4px; padding:0 6px; margin:3px 4px 0 0; font-size:12px; color:#aaa }
-  textarea.editor { width:100%; min-height:420px; resize:vertical; white-space:pre; line-height:1.5; font-family:ui-monospace, SFMono-Regular, Menlo, monospace }
+  textarea.editor { width:100%; min-height:420px; resize:vertical; white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.5; font-family:ui-monospace, SFMono-Regular, Menlo, monospace }
   .rem { border:1px solid var(--border); border-radius:7px; padding:10px 12px; margin-bottom:8px; display:flex; gap:10px; align-items:flex-start; background:#242424 }
   .rem .txt { flex:1 }
   .rem a { color:var(--accent); text-decoration:none; font-size:12px }
@@ -127,10 +122,7 @@
   .editor-document { min-width:0 }
   .editor-title { max-width:320px; color:var(--fg); font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
   .editor-actions { justify-self:end }
-  .viewmode { display:inline-flex; gap:2px; padding:2px; background:#191919; border:1px solid var(--border); border-radius:6px }
-  .viewmode button { padding:4px 10px; background:transparent; border-color:transparent }
-  .viewmode button:hover { background:var(--hover); border-color:transparent }
-  .viewmode button.on { background:var(--accent-soft); color:#f2b46f; border-color:transparent }
+  .viewmode { display:inline-flex; gap:24px }
   .split { display:flex; flex:1; min-height:0; gap:12px; align-items:stretch }
   .split textarea.editor { flex:1; height:100%; min-height:0; resize:none; overflow-y:auto }
   .split.preview { display:block; overflow-y:auto }
@@ -171,10 +163,6 @@
     .brand-mark { width:34px; height:34px }
     .brand-logo { width:24px; height:24px }
     .brand-subtitle { display:none }
-    .header-context { flex:1 }
-    .header-divider { height:20px }
-    #headerProject { max-width:none }
-    header .spacer { display:none }
     .header-lock { justify-content:center; padding:0 }
     .header-lock-label { display:none }
     main { flex-direction:column }
@@ -200,6 +188,138 @@
     .md { padding:20px }
     .split.preview .md { min-height:calc(100vh - 240px) }
   }
+  /* Workspace polish: retain the charcoal and amber identity. */
+  :root { color-scheme:dark; --border:rgba(255,255,255,.08); --dim:#a3a3a3 }
+  button, input, textarea, select { border-radius:8px }
+  button { transition:background-color 140ms, border-color 140ms }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline:2px solid var(--accent); outline-offset:3px }
+  header { height:76px; padding:16px 24px; box-shadow:none; border-bottom:1px solid var(--border) }
+  .brand { min-width:214px; gap:11px }
+  .brand-mark { width:38px; height:38px; background:none; border:0; box-shadow:none }
+  .brand-logo { width:38px; height:38px }
+  header h1 { font-size:20px; letter-spacing:-.04em }
+  .brand-subtitle { font-size:10px; margin-top:4px; color:var(--dim) }
+  aside { width:252px; padding:18px 14px; box-shadow:none; border-right:1px solid var(--border); gap:0; overflow:hidden }
+  .sidebar-toggle { position:absolute; top:18px; right:14px; z-index:1; width:30px; height:32px; background:transparent; border-color:transparent }
+  #projectMenu { display:flex; flex-direction:column; min-height:0 }
+  .sidebar-item { font-size:11px; text-transform:uppercase; letter-spacing:.09em; font-weight:600; padding:8px 42px 8px 8px; flex:none }
+  .project-search { width:100%; margin:10px 0 14px; padding:9px 11px; font-size:12px; background:#ffffff04; border-color:transparent }
+  .project-search:focus { border-color:transparent; background:#ffffff08; box-shadow:none }
+  #projList { margin:0; padding:0 4px 0 0; border:0; gap:3px; overflow-y:auto; min-height:0 }
+  .project-search { flex:none }
+  .project-empty { padding:12px 8px; color:var(--dim); font-size:12px }
+  .proj { position:relative; display:flex; align-items:center; gap:10px; padding:9px 12px; min-height:40px; flex:none; font-size:13px; border:0; border-radius:6px }
+  .proj::before { content:attr(data-initial); display:grid; place-items:center; width:24px; height:24px; flex:none; color:#777; font:10px ui-monospace,monospace }
+  .project-name { overflow:hidden; white-space:nowrap; text-overflow:ellipsis }
+  .proj.active { background:#ffffff08; color:var(--fg) }
+  .proj.active::before { color:var(--fg) }
+  .proj.active::after { content:""; position:absolute; left:0; top:0; bottom:0; width:2px; border-radius:2px; background:var(--accent) }
+  .mobile-project-picker { display:none }
+  #content { padding:30px 38px 24px }
+  .workspace-intro { flex:none; margin-bottom:24px }
+  .workspace-intro .eyebrow { color:var(--dim); font-size:10px; text-transform:uppercase; letter-spacing:.14em }
+  .workspace-intro h2 { margin:5px 0 4px; font-size:28px; line-height:1.3; font-weight:600; color:var(--fg); text-transform:none; letter-spacing:-.035em; overflow-wrap:anywhere }
+  .workspace-intro p { font-size:12px; color:var(--dim) }
+  .workspace-head { padding-bottom:0; margin-bottom:24px; min-height:44px }
+  .tabs { gap:24px; align-self:stretch }
+  .tab, .viewmode button { padding:10px 1px 13px; border:0; border-bottom:2px solid transparent; border-radius:0; font-size:13px; color:var(--dim); background:transparent }
+  button.tab.active, .viewmode button.on { background:transparent; border-color:var(--accent); color:var(--accent) }
+  button.tab:hover, .viewmode button:hover { background:transparent; color:var(--fg) }
+  button.danger { background:transparent; font-size:12px }
+  button.danger:hover { background:#ff6b6b0c; border-color:#ff6b6b40 }
+  .delete-project { border-color:transparent }
+  .delete-project svg { display:none; width:16px; height:16px }
+  .project-actions { padding-bottom:8px }
+  .collection-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:20px; position:sticky; top:0; z-index:1; background:var(--bg); padding-bottom:8px }
+  .collection-toolbar h3 { font-size:14px; font-weight:600; display:flex; align-items:center; gap:9px }
+  .collection-toolbar input { width:230px; font-size:12px; padding:8px 11px; background:var(--bg2) }
+  .collection-count { font-size:11px; color:var(--dim); background:var(--bg3); padding:1px 7px; border-radius:5px; font-variant-numeric:tabular-nums }
+  .collection-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-rows:max-content; gap:14px; align-content:start }
+  .collection-grid .collection-toolbar, .collection-grid .empty { grid-column:1 / -1 }
+  .collection-grid .collection-toolbar { margin-bottom:6px }
+  .docrow { display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; width:100%; text-align:left; padding:22px; margin-bottom:0; border-radius:10px; background:#242424; position:relative }
+  .docrow:hover { border-color:var(--border-accent); background:#282623 }
+  .doc-head { align-items:center; margin-bottom:10px }
+  .docrow .t { font-size:15px; letter-spacing:-.015em; overflow-wrap:anywhere }
+  .docrow .p { flex:none; font-size:11px }
+  .note-path { display:block; margin-bottom:18px; color:var(--dim); font:11px ui-monospace,monospace; overflow-wrap:anywhere }
+  .sec-chip { background:#ffffff03; border:1px solid var(--border); font-size:11px; padding:2px 7px; margin:3px 4px 0 0; max-width:100%; overflow-wrap:anywhere }
+  .skill-summary { line-height:1.8; font-size:13px }
+  .rem { padding:20px 22px; border-radius:10px; gap:24px; margin-bottom:10px }
+  .rem .txt { min-width:0; overflow-wrap:anywhere }
+  .txt-main { line-height:1.8; max-width:100ch; margin-bottom:8px }
+  .rem .meta { margin-top:8px; font-size:10px }
+  .rem > button { border-color:transparent; color:var(--dim); width:32px; height:32px; padding:7px; flex:none; display:grid; place-items:center }
+  .rem > button:hover, .rem > button:focus-visible { color:var(--danger) }
+  .rem > button svg { width:16px; height:16px }
+  .empty { padding:40px 24px; border-radius:10px }
+  .editorbar { margin-bottom:24px; border-bottom:1px solid var(--border); padding-bottom:0; align-items:stretch }
+  .editor-identity, .editor-actions { padding-bottom:8px }
+  .viewmode { align-self:stretch }
+  .editor-actions button { min-height:34px; padding:5px 10px; font-size:12px; line-height:22px; font-weight:400; background:transparent; border-color:transparent }
+  .editor-actions .primary { color:var(--accent) }
+  .editor-actions .primary:hover { background:var(--hover); border-color:transparent }
+  .editor-actions .danger:hover { border-color:transparent }
+  .back-button { background:transparent; border-color:transparent; color:var(--dim) }
+  .back-button:hover { background:var(--hover); border-color:transparent; color:var(--fg) }
+  .editor-title { display:block; max-width:100% }
+  .md { padding:32px; line-height:1.85; border-radius:10px }
+  .split > .md, .split > textarea { min-width:0 }
+  .md p, .md li { overflow-wrap:anywhere }
+  .split.preview .md { padding:32px }
+  .md h1 { letter-spacing:-.035em; font-size:30px }
+  .md h2 { margin-top:30px }
+  .md blockquote { padding:8px 16px; background:#e9973f05 }
+  textarea.editor { padding:22px; line-height:1.8 }
+  textarea.editor:focus { border-color:var(--border); box-shadow:none; outline:none }
+  .graph-workspace { border-radius:10px }
+  .proj[hidden], .docrow[hidden], .rem[hidden], .empty[hidden] { display:none }
+  @media (min-width:701px) {
+    aside.collapsed { width:64px; padding:62px 8px 18px }
+    aside.collapsed .sidebar-toggle { right:17px }
+    aside.collapsed .project-search, aside.collapsed .project-name, aside.collapsed .sidebar-item { display:none }
+    aside.collapsed #projList { padding:0; gap:6px }
+    aside.collapsed #projList[hidden] { display:flex }
+    aside.collapsed .proj { justify-content:center; padding:10px 0; min-height:44px }
+    aside.collapsed .proj::before { font-size:11px }
+  }
+  @media (min-width:1600px) { #content { padding-left:max(38px,calc((100vw - 1600px)/2)); padding-right:max(38px,calc((100vw - 1600px)/2)) } }
+  @media (max-width:1000px) { #content { padding:24px } aside { width:220px } .brand { min-width:182px } .collection-grid { grid-template-columns:1fr } }
+  @media (max-width:700px) {
+    header { height:68px; padding:12px 16px; gap:12px }
+    .brand { min-width:0 } header h1 { font-size:18px }
+    .brand-mark, .brand-logo { width:32px; height:32px }
+    aside { width:100%; padding:4px 16px; max-height:none; gap:0 }
+    #projectMenu { display:none }
+    .mobile-project-picker { display:flex; align-items:center; gap:16px; min-width:0 }
+    .mobile-project-picker span { font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--dim); flex:none }
+    .mobile-project-picker select { flex:1; min-width:0; width:0; background:var(--bg2); color:var(--fg); border:0; padding:8px; font:inherit; font-size:13px; min-height:44px }
+    .sidebar-toggle { display:none }
+    .project-search { margin:4px 0 8px; padding:6px 10px }
+    #projList { margin:0; gap:5px; overflow-y:hidden; padding:0 }
+    #content { padding:20px 16px 16px }
+    .workspace-intro { margin-bottom:16px }
+    .workspace-intro h2 { font-size:24px }
+    .workspace-intro p { display:none }
+    .workspace-head { gap:6px; margin-bottom:18px }
+    .tabs, .viewmode { gap:18px } .tab, .viewmode button { padding:10px 0 }
+    .project-actions { padding-bottom:0 }
+    .delete-project { width:44px; height:44px; display:grid; place-items:center }
+    .delete-project svg { display:block }
+    .delete-project span { display:none }
+    .collection-toolbar { gap:12px }
+    .collection-toolbar h3 { flex:none }
+    .collection-toolbar input { width:0; flex:1; min-width:0 }
+    .docrow, .rem { padding:18px }
+    .rem { gap:10px }
+    .rem > button { width:44px; height:44px }
+    .doc-head { flex-wrap:wrap; gap:6px }
+    .split.preview .md, .md { padding:24px 20px }
+    .editor-title { max-width:140px }
+    .editor-actions { gap:5px }
+    .editor-actions button { min-height:44px; padding:7px 10px }
+  }
+  @media (prefers-reduced-motion:reduce) { *, *::before, *::after { transition:none !important } }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
@@ -208,19 +328,12 @@
 <header>
   <div class="brand">
     <span class="brand-mark" aria-hidden="true">
-      <img class="brand-logo" src="/logo.png" alt="" draggable="false">
+      <svg class="brand-logo" viewBox="0 0 40 40" fill="none"><path d="M20 18v17m0-10-8 6m8-6 8 6" stroke="#e9973f" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 21C10 21 5 15 6 7c8-1 14 4 14 14Z" fill="#e9973f"/><path d="M22 17C22 9 27 4 35 5c0 8-5 13-13 12Z" fill="#f2bd7e"/></svg>
     </span>
     <div class="brand-copy">
       <h1>mindroot</h1>
       <span class="brand-subtitle">Persistent memory</span>
     </div>
-  </div>
-  <div class="header-context" hidden>
-    <span class="header-divider" aria-hidden="true"></span>
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M4 7.5h6l2 2h8v9H4z" stroke-width="1.7" stroke-linejoin="round"/>
-    </svg>
-    <span id="headerProject" aria-live="polite"></span>
   </div>
   <div class="spacer"></div>
   <button class="header-lock" type="button" onclick="logout()" title="Lock dashboard" aria-label="Lock dashboard">
@@ -242,18 +355,21 @@
 
 <main id="app" style="display:none">
   <aside>
+    <label class="mobile-project-picker"><span>Project</span><select id="mobileProject" aria-label="Choose project" onchange="selectProject(this.value)"></select></label>
     <button class="sidebar-toggle" type="button" title="Shrink menu" aria-label="Shrink menu" aria-expanded="true" onclick="toggleSidebar()">
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path d="m14 7-5 5 5 5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </button>
     <div id="projectMenu">
-      <button class="sidebar-item" id="projectMenuToggle" type="button" title="Project Memories" aria-label="Project Memories" aria-expanded="true" aria-controls="projList" onclick="toggleProjectMenu()">
+      <button class="sidebar-item" id="projectMenuToggle" type="button" title="Projects" aria-label="Projects" aria-expanded="true" aria-controls="projList" onclick="toggleProjectMenu()">
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 7h7l2 2h9v11H3zM3 7V4h7l2 3" stroke-width="1.7" stroke-linejoin="round"/></svg>
-        <span class="sidebar-label">Project Memories</span>
+        <span class="sidebar-label">Projects</span>
         <svg class="menu-chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m9 6 6 6-6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
+      <input class="project-search" type="search" placeholder="Find a project…" aria-label="Find a project" oninput="filterProjects()">
       <div id="projList"></div>
+      <p class="project-empty" role="status" hidden>No projects match.</p>
     </div>
   </aside>
   <section id="content"></section>
@@ -336,6 +452,7 @@ function applyRoute({ slug = null, tab = "notes", doc = null } = {}) {
   disposeGraph = null;
   activeHash = location.hash || "#/";
   currentProject = slug;
+  $("#mobileProject").value = slug || "";
   currentTab = tab;
   currentDoc = doc;
   document.querySelectorAll(".proj").forEach((n) => {
@@ -349,11 +466,6 @@ function applyRoute({ slug = null, tab = "notes", doc = null } = {}) {
     c.innerHTML = '<div class="view"><div class="empty">No projects yet. Agents create them automatically on first write.</div></div>';
     return;
   }
-  $(".header-context").hidden = false;
-  const projectLabel = $("#headerProject");
-  projectLabel.textContent = slug;
-  projectLabel.title = projectLabel.textContent;
-  projectLabel.setAttribute("aria-label", "Current project: " + slug);
   renderTabs();
 }
 
@@ -361,6 +473,11 @@ window.addEventListener("hashchange", () => applyRoute(routeFromHash()));
 
 async function renderProjects() {
   const rows = await api("GET", "/api/projects");
+  const picker = $("#mobileProject");
+  picker.replaceChildren(...rows.map((r) => new Option(r.slug, r.slug)));
+  picker.disabled = !rows.length;
+  if (!rows.length) picker.add(new Option("No projects yet", ""));
+  if (currentProject) picker.value = currentProject;
   const el = $("#projList");
   el.innerHTML = "";
   for (const r of rows) {
@@ -368,14 +485,26 @@ async function renderProjects() {
     div.type = "button";
     div.className = "proj" + (r.slug === currentProject ? " active" : "");
     div.dataset.slug = r.slug;
+    div.setAttribute("aria-label", r.slug);
     div.dataset.initial = r.slug.slice(0, 2).toUpperCase();
-    div.textContent = r.slug;
-    div.title = r.docs + " notes, " + r.memories + " memories, " + (r.skills || 0) + " skills";
+    const name = document.createElement("span");
+    name.className = "project-name";
+    name.textContent = r.slug;
+    div.appendChild(name);
+    div.title = r.slug + " · " + r.docs + " notes, " + r.memories + " memories, " + (r.skills || 0) + " skills";
     div.onclick = () => selectProject(r.slug);
     el.appendChild(div);
   }
   if (!rows.length) el.innerHTML = '<p class="muted">No projects yet</p>';
+  filterProjects();
   return rows;
+}
+
+function filterProjects() {
+  const query = $(".project-search").value.trim().toLowerCase();
+  const rows = [...document.querySelectorAll(".proj")];
+  rows.forEach((row) => { row.hidden = !row.dataset.slug.toLowerCase().includes(query); });
+  $(".project-empty").hidden = !query || rows.some((row) => !row.hidden);
 }
 
 function selectProject(slug) {
@@ -388,6 +517,11 @@ function renderTabs() {
   const c = $("#content");
   c.innerHTML = "";
   if (!(["notes", "skills"].includes(currentTab) && currentDoc !== null)) {
+    const intro = document.createElement("div");
+    intro.className = "workspace-intro";
+    intro.innerHTML = '<h2></h2><div class="eyebrow">Project workspace</div>';
+    intro.querySelector("h2").textContent = currentProject;
+    c.appendChild(intro);
     const head = document.createElement("div");
     head.className = "workspace-head";
     const tabs = document.createElement("div");
@@ -403,7 +537,7 @@ function renderTabs() {
     }
     const actions = document.createElement("div");
     actions.className = "project-actions";
-    actions.innerHTML = '<button class="danger delete-project">Delete project</button>';
+    actions.innerHTML = '<button class="danger delete-project" aria-label="Delete project" title="Delete project"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v5M14 11v5"/></svg><span>Delete project</span></button>';
     actions.querySelector("button").onclick = deleteCurrentProject;
     head.append(tabs, actions);
     c.appendChild(head);
@@ -450,18 +584,49 @@ async function deleteCurrentProject() {
 
 async function renderNotes(view) {
   const docs = await api("GET", "/api/projects/" + currentProject + "/docs");
+  if (!view.isConnected) return;
   if (currentDoc !== null) return renderEditor(view, docs);
+  view.classList.add("collection-grid");
   for (const d of docs) {
-    const row = document.createElement("div");
+    const row = document.createElement("button");
+    row.type = "button";
     row.className = "docrow";
     row.innerHTML = '<div class="doc-head"><div class="t"></div><div class="p">' + d.sections.length + ' sections</div></div>';
     row.querySelector(".t").textContent = d.title + " ";
+    const path = document.createElement("span");
+    path.className = "note-path";
+    path.textContent = d.path;
+    row.appendChild(path);
     const chips = d.sections.filter(Boolean).map((s) => '<span class="sec-chip">' + esc(s) + "</span>").join("");
     row.insertAdjacentHTML("beforeend", '<div>' + chips + "</div>");
     row.onclick = () => navTo(routeUrl(currentProject, "notes", d.path));
     view.appendChild(row);
   }
   if (!docs.length) view.innerHTML = '<div class="empty">No notes yet. Agents create them with <b>mindroot_save_note</b>.</div>';
+  addCollectionToolbar(view, "Notes", docs.length);
+}
+
+function addCollectionToolbar(view, label, count) {
+  const toolbar = document.createElement("div");
+  toolbar.className = "collection-toolbar";
+  toolbar.innerHTML = '<h3>' + label + '<span class="collection-count">' + count + '</span></h3><input type="search" placeholder="Filter ' + label.toLowerCase() + '…" aria-label="Filter ' + label.toLowerCase() + '">';
+  const empty = document.createElement("div");
+  empty.className = "empty";
+  empty.hidden = true;
+  empty.setAttribute("role", "status");
+  empty.textContent = "No matches. Try a different search.";
+  toolbar.querySelector("input").oninput = (event) => {
+    const query = event.target.value.trim().toLowerCase();
+    let visible = 0;
+    view.querySelectorAll(".docrow, .rem").forEach((row) => {
+      row.hidden = !row.textContent.toLowerCase().includes(query);
+      if (!row.hidden) visible++;
+    });
+    toolbar.querySelector(".collection-count").textContent = query ? visible + " / " + count : count;
+    empty.hidden = visible > 0 || count === 0;
+  };
+  view.prepend(toolbar);
+  view.appendChild(empty);
 }
 
 let mdMode = localStorage.getItem("mindroot_mdmode") || "preview";
@@ -470,6 +635,7 @@ let sidebarCollapsed = localStorage.getItem("mindroot_sidebar") === "collapsed";
 function toggleSidebar() { setSidebar(!sidebarCollapsed); }
 function setSidebar(collapsed) {
   sidebarCollapsed = collapsed;
+  if (collapsed) { $(".project-search").value = ""; filterProjects(); }
   localStorage.setItem("mindroot_sidebar", collapsed ? "collapsed" : "expanded");
   applySidebar();
 }
@@ -491,6 +657,9 @@ function setProjectMenu(expanded) {
   localStorage.setItem("mindroot_project_menu", expanded ? "expanded" : "collapsed");
   $("#projectMenuToggle").setAttribute("aria-expanded", String(expanded));
   $("#projList").hidden = !expanded;
+  $(".project-search").hidden = !expanded;
+  if (!expanded) $(".project-empty").hidden = true;
+  else filterProjects();
 }
 setProjectMenu(projectMenuExpanded);
 
@@ -528,6 +697,7 @@ async function renderEditor(view, docs) {
   wrap.className = "split " + mdMode;
   const ta = document.createElement("textarea");
   ta.className = "editor";
+  ta.setAttribute("aria-label", "Note content");
   ta.value = doc.content;
   ta.spellcheck = false;
   let prev = null;
@@ -563,6 +733,7 @@ async function renderEditor(view, docs) {
 
 async function renderMemories(view) {
   const rows = await api("GET", "/api/projects/" + currentProject + "/memories");
+  if (!view.isConnected) return;
   for (const r of rows) {
     const div = document.createElement("div");
     div.className = "rem";
@@ -572,12 +743,16 @@ async function renderMemories(view) {
       '<div class="meta">#' + r.id + " · " + r.target_type + " · " + new Date(r.updated_at).toISOString().slice(0,16).replace("T"," ") + "</div></div>";
     div.querySelector(".txt-main").textContent = r.text;
     const del = document.createElement("button");
-    del.className = "danger"; del.textContent = "Delete";
+    del.className = "danger";
+    del.title = "Delete memory";
+    del.setAttribute("aria-label", "Delete memory #" + r.id);
+    del.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v5M14 11v5"/></svg>';
     del.onclick = async () => { await api("DELETE", "/api/projects/" + currentProject + "/memories/" + r.id); renderTabs(); };
     div.appendChild(del);
     view.appendChild(div);
   }
   if (!rows.length) view.insertAdjacentHTML("beforeend", '<div class="empty">No memories yet</div>');
+  addCollectionToolbar(view, "Memories", rows.length);
   view.querySelectorAll("a[data-p]").forEach((a) =>
     a.onclick = (e) => { e.preventDefault(); navTo(routeUrl(currentProject, "notes", a.dataset.p)); });
 }
@@ -587,6 +762,7 @@ async function renderSkills(view) {
   if (currentDoc !== null) return renderSkillEditor(view, slug, currentDoc);
   const rows = await api("GET", "/api/projects/" + encodeURIComponent(slug) + "/skills");
   if (!view.isConnected) return;
+  view.classList.add("collection-grid");
   for (const skill of rows) {
     const row = document.createElement("button");
     row.className = "docrow skillrow";
@@ -598,6 +774,7 @@ async function renderSkills(view) {
     view.appendChild(row);
   }
   if (!rows.length) view.innerHTML = '<div class="empty">No skills yet. Saved procedures from your agents will appear here.</div>';
+  addCollectionToolbar(view, "Skills", rows.length);
 }
 
 async function renderSkillEditor(view, slug, name) {
