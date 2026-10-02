@@ -215,6 +215,7 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
   let hovered = null;
   let disposed = false;
   let initialFit = true;
+  let userAdjusted = false;
   let fitFrame;
   let revealFrame;
   let motionFrame;
@@ -391,7 +392,6 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
     }
   }
   motionPreference.addEventListener("change", updateMotion);
-  document.addEventListener("visibilitychange", updateMotion);
 
   function fit() {
     cancelAnimationFrame(fitFrame);
@@ -409,9 +409,28 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
     });
   }
 
+  // A hidden browser tab suspends rendering: rAF, layout and ResizeObserver
+  // delivery all pause, so a mount or resize overlapping that window can leave
+  // the canvas sized for a stale viewport or the camera at the default zoom.
+  // Re-assert both when the tab becomes active again.
+  function refit() {
+    if (disposed || document.hidden || !host.clientWidth || !host.clientHeight) return;
+    graph.width(host.clientWidth).height(host.clientHeight);
+    if (host.style.visibility !== "visible" || !userAdjusted) fit();
+  }
+  const markAdjusted = () => { userAdjusted = true; };
+  host.addEventListener("wheel", markAdjusted, { passive: true, capture: true });
+  host.addEventListener("pointerdown", markAdjusted, { passive: true, capture: true });
+  function handleActivation() {
+    if (!disposed && !document.hidden) refit();
+    updateMotion();
+  }
+  document.addEventListener("visibilitychange", handleActivation);
+  window.addEventListener("resize", refit);
+
   const [zoomIn, zoomOut] = view.querySelectorAll(".graph-controls button");
-  zoomIn.onclick = () => graph.zoom(Math.min(8, graph.zoom() * 1.4), duration);
-  zoomOut.onclick = () => graph.zoom(Math.max(0.15, graph.zoom() / 1.4), duration);
+  zoomIn.onclick = () => { userAdjusted = true; graph.zoom(Math.min(8, graph.zoom() * 1.4), duration); };
+  zoomOut.onclick = () => { userAdjusted = true; graph.zoom(Math.max(0.15, graph.zoom() / 1.4), duration); };
   const resize = new ResizeObserver(() => {
     if (disposed || !host.clientWidth || !host.clientHeight) return;
     graph.width(host.clientWidth).height(host.clientHeight);
@@ -424,7 +443,8 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
     cancelAnimationFrame(revealFrame);
     cancelAnimationFrame(motionFrame);
     motionPreference.removeEventListener("change", updateMotion);
-    document.removeEventListener("visibilitychange", updateMotion);
+    document.removeEventListener("visibilitychange", handleActivation);
+    window.removeEventListener("resize", refit);
     resize.disconnect();
     graph._destructor();
   };
