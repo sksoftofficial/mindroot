@@ -1,6 +1,6 @@
 {
   "name": "@sksoftofficial/mindroot",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Long-term memory for AI agents: hybrid-searched memories over human-editable markdown notes. 100% local — offline ONNX embeddings, SQLite FTS5, MCP server, REST API, CLI, dashboard. No cloud, no API keys.",
   "repository": {
     "type": "git",
