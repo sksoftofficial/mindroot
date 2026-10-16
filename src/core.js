@@ -107,13 +107,62 @@ export async function readNote(db, slug, relPath, section) {
   };
 }
 
-export async function saveNote(db, slug, relPath, content) {
+// Serializes read-modify-write cycles per note file so concurrent calls
+// (parallel tool batches, overlapping sessions) interleave safely.
+const noteWrites = new Map();
+
+function withNoteWrite(full, fn) {
+  const prev = noteWrites.get(full) ?? Promise.resolve();
+  const run = prev.then(fn, fn);
+  noteWrites.set(full, run.then(
+    () => {},
+    () => {},
+  ));
+  return run;
+}
+
+async function readRawNote(full) {
+  try {
+    return await fs.readFile(full, "utf8");
+  } catch (err) {
+    if (err.code === "ENOENT") return null;
+    throw err;
+  }
+}
+
+async function writeNote(db, slug, relPath, content) {
   const full = safeJoin(slug, relPath);
   await fs.mkdir(path.dirname(full), { recursive: true });
   await fs.writeFile(full, content, "utf8");
   const stat = await fs.stat(full);
   await reindexDoc(db, slug, relPath, content, Math.floor(stat.mtimeMs));
   return readNote(db, slug, relPath);
+}
+
+export function saveNote(db, slug, relPath, content, oldContent) {
+  const full = safeJoin(slug, relPath);
+  return withNoteWrite(full, async () => {
+    const current = await readRawNote(full);
+    if (current === null) {
+      if (oldContent !== undefined && oldContent !== null && oldContent !== "") {
+        throw httpError(400, `note does not exist yet: ${relPath} (create it without old_content)`);
+      }
+    } else {
+      if (typeof oldContent !== "string") {
+        throw httpError(
+          400,
+          `old_content required to overwrite existing note: ${relPath} (pass its exact current content from mindroot_read_note)`,
+        );
+      }
+      if (oldContent !== current) {
+        throw httpError(
+          409,
+          `conflict: note '${relPath}' changed since read (expected ${oldContent.length} chars, current ${current.length}). Re-read the note, merge your changes, and retry with its current content as old_content`,
+        );
+      }
+    }
+    return writeNote(db, slug, relPath, content);
+  });
 }
 
 export async function deleteNote(db, slug, relPath) {
@@ -140,14 +189,35 @@ export async function deleteNote(db, slug, relPath) {
   return { deleted: relPath };
 }
 
-export async function updateSection(db, slug, relPath, headingPath, newContent) {
-  const { content } = await verifyAndLoadDoc(db, slug, relPath);
-  const parsed = parseMarkdown(content);
-  const sec = parsed.sections.find((s) => s.path === headingPath);
-  const updated = sec
-    ? replaceSectionBody(content, sec, newContent)
-    : appendSection(content, headingPath, newContent);
-  return saveNote(db, slug, relPath, updated);
+export function updateSection(db, slug, relPath, headingPath, oldContent, newContent) {
+  const full = safeJoin(slug, relPath);
+  return withNoteWrite(full, async () => {
+    const { content } = await verifyAndLoadDoc(db, slug, relPath);
+    const parsed = parseMarkdown(content);
+    const sec = parsed.sections.find((s) => s.path === headingPath);
+    if (!sec) {
+      if (oldContent === "") {
+        return writeNote(db, slug, relPath, appendSection(content, headingPath, newContent));
+      }
+      throw httpError(
+        typeof oldContent === "string" && oldContent ? 409 : 400,
+        `section not found: ${headingPath} (pass old_content: "" to append it as a new section)`,
+      );
+    }
+    if (typeof oldContent !== "string") {
+      throw httpError(
+        400,
+        `old_content required: pass the exact current body of section '${headingPath}' from mindroot_read_note`,
+      );
+    }
+    if (sec.body !== oldContent) {
+      throw httpError(
+        409,
+        `conflict: section '${headingPath}' in '${relPath}' changed since read (expected ${oldContent.length} chars, current ${sec.body.length}). Re-read the section and retry with its current body as old_content`,
+      );
+    }
+    return writeNote(db, slug, relPath, replaceSectionBody(content, sec, newContent));
+  });
 }
 
 export async function listMemories(db, slug) {

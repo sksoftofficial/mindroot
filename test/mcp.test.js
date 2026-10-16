@@ -125,6 +125,7 @@ test("update_section appends a missing section", async () => {
     project: "section-upsert",
     path: "note.md",
     heading_path: "Added",
+    old_content: "",
     content: "new body",
   });
   assert.equal(res.body.result.isError, undefined);

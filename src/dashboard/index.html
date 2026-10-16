@@ -792,7 +792,8 @@ async function renderEditor(view, docs) {
   view.appendChild(wrap);
   $("#saveBtn").onclick = async () => {
     try {
-      await api("PUT", "/api/projects/" + currentProject + "/doc?path=" + encodeURIComponent(currentDoc), { content: ta.value });
+      await api("PUT", "/api/projects/" + currentProject + "/doc?path=" + encodeURIComponent(currentDoc), { content: ta.value, old_content: doc.content });
+      doc.content = ta.value;
       toast("saved & reindexed");
     } catch (e) { toast("save failed: " + e.message, true); }
   };

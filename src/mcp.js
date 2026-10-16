@@ -109,13 +109,18 @@ export function tools() {
     {
       name: "save_note",
       description:
-        "Create or fully overwrite a markdown memory note. Sections are parsed from headings (# .. ######) and are individually readable (mindroot_read_note `section`) and string-searchable (mindroot_search_notes); embeddings are generated for memories only. After saving, consider saving 1-3 linked memories (mindroot_save_memory with target_path) so key facts surface in memory searches.",
+        "Create a new note, or overwrite an existing one with conflict detection: overwriting requires old_content — the note's exact current full content as last read (mindroot_read_note) — and the write is rejected if the note changed since your read. On conflict, re-read and merge; never blind-overwrite. To change one section, prefer mindroot_update_section: it replaces only that section and leaves the rest of the note intact. Sections are parsed from headings (# .. ######) and are individually readable (mindroot_read_note `section`) and string-searchable (mindroot_search_notes); embeddings are generated for memories only. After saving, consider saving 1-3 linked memories (mindroot_save_memory with target_path) so key facts surface in memory searches.",
       inputSchema: {
         type: "object",
         properties: {
           project: { type: "string" },
           path: { type: "string", description: "Note path ending in .md" },
           content: { type: "string", description: "Full markdown content" },
+          old_content: {
+            type: "string",
+            description:
+              "Exact current full content of the note as last read. Required when overwriting an existing note; omit when creating. Any mismatch rejects the write with a conflict error.",
+          },
         },
         required: ["project", "path", "content"],
       },
@@ -123,16 +128,21 @@ export function tools() {
     {
       name: "update_section",
       description:
-        "Replace the body of an existing heading-section, or append it to the note when missing.",
+        "Replace one section's body with conflict detection: old_content must be the section's exact current body as last read (mindroot_read_note), and the write is rejected if it changed since. On conflict, re-read the section and retry — never blind-overwrite. Concurrent updates to different sections of the same note are safe: each write only replaces its own section when the old content matches. To append a section that does not exist yet, pass old_content: \"\".",
       inputSchema: {
         type: "object",
         properties: {
           project: { type: "string" },
           path: { type: "string" },
           heading_path: { type: "string", description: "Section address like 'Architecture::Storage' (heading titles joined by ::)" },
+          old_content: {
+            type: "string",
+            description:
+              "Exact current body of this section as last read via mindroot_read_note. Must match byte-for-byte or the write is rejected with a conflict error; pass \"\" to append a section that does not exist yet.",
+          },
           content: { type: "string", description: "New body text for this section" },
         },
-        required: ["project", "path", "heading_path", "content"],
+        required: ["project", "path", "heading_path", "old_content", "content"],
       },
     },
     {
@@ -222,9 +232,9 @@ async function callTool(db, name, args) {
     case "read_note":
       return core.readNote(db, args.project, args.path, args.section);
     case "save_note":
-      return core.saveNote(db, args.project, args.path, args.content);
+      return core.saveNote(db, args.project, args.path, args.content, args.old_content);
     case "update_section":
-      return core.updateSection(db, args.project, args.path, args.heading_path, args.content);
+      return core.updateSection(db, args.project, args.path, args.heading_path, args.old_content, args.content);
     case "delete_note":
       return core.deleteNote(db, args.project, args.path);
     case "search_skills":

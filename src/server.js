@@ -134,7 +134,7 @@ async function handleApi(req, res, url, db) {
         return sendJson(res, 200, await core.readNote(db, slug, relPath, url.searchParams.get("section") ?? undefined));
       if (req.method === "PUT") {
         const body = await readJson(req);
-        return sendJson(res, 200, await core.saveNote(db, slug, relPath, body.content ?? ""));
+        return sendJson(res, 200, await core.saveNote(db, slug, relPath, body.content ?? "", body.old_content));
       }
       if (req.method === "DELETE") return sendJson(res, 200, await core.deleteNote(db, slug, relPath));
       throw methodNotAllowed();
@@ -145,7 +145,7 @@ async function handleApi(req, res, url, db) {
         return sendJson(
           res,
           200,
-          await core.updateSection(db, slug, body.path, body.heading_path, body.content),
+          await core.updateSection(db, slug, body.path, body.heading_path, body.old_content, body.content),
         );
       }
       throw methodNotAllowed();
