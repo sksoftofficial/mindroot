@@ -29,11 +29,11 @@ function graphData(data, project = null) {
 
 // A layout constraint only: coordinates never create graph edges.
 function brainLayout(nodes) {
-  // Side-profile cortex, sampled as a curved shell. These are layout guides,
+  // Side-profile cortex, filled uniformly in screen space. These are layout guides,
   // never visible geometry: every rendered point is a real note or memory.
-  const cortex = [[-300,-30],[-278,-111],[-217,-179],[-121,-217],[-5,-226],
-    [111,-205],[215,-158],[271,-83],[284,6],[257,72],[197,93],
-    [118,65],[54,60],[3,111],[-81,119],[-152,92],[-179,44],[-251,33]];
+  const cortex = [[-300,-30],[-283,-108],[-225,-177],[-128,-219],[-12,-231],
+    [107,-212],[210,-165],[269,-91],[284,-3],[260,64],[200,87],
+    [123,65],[58,64],[3,111],[-81,119],[-152,92],[-186,47],[-251,37]];
   const outline = (angle) => {
     const t = angle / (Math.PI * 2) * cortex.length;
     const index = Math.floor(t);
@@ -44,91 +44,73 @@ function brainLayout(nodes) {
       (2 * p(-1)[axis] - 5 * p(0)[axis] + 4 * p(1)[axis] - p(2)[axis]) * f * f +
       (-p(-1)[axis] + 3 * p(0)[axis] - 3 * p(1)[axis] + p(2)[axis]) * f * f * f));
   };
-  const points = [];
-  // Allocate fewer points to the small lower lobes for more even visual density.
-  const cortexCount = Math.ceil(nodes.length * 0.85);
-  const cerebellumCount = Math.floor(nodes.length * 0.12);
-  const counts = [cortexCount, cerebellumCount, nodes.length - cortexCount - cerebellumCount];
-  for (const [region, count] of counts.entries()) {
-    for (let i = 0; i < count; i++) {
-      const depth = 1 - 2 * (i + 0.5) / count;
-      const angle = (i * 2.399963229728653) % (Math.PI * 2);
-      const r = Math.sqrt(1 - depth * depth);
-      let x, y;
-      if (region === 0) {
-        const edge = outline(angle);
-        const fold = 1 - 0.035 * Math.sin(angle * 13 + depth * 7) ** 2;
-        x = edge[0] * r * fold;
-        y = -45 + (edge[1] + 45) * r * fold;
-      } else if (region === 1) {
-        // A compact, rounded lobe tucked under the posterior cortex.
-        const fold = 1 - 0.025 * Math.cos(angle * 12 + depth * 4);
-        x = 139 + Math.cos(angle) * r * 91 * fold;
-        y = 124 + Math.sin(angle) * r * 54 * fold - (x - 139) * 0.16;
-      } else {
-        // A continuous tapered stem rather than a detached oval of points.
-        const t = (i + 0.5) / count;
-        const width = 25 * (1 - t) + 9 * t + 8 * Math.sin(Math.PI * t);
-        y = 85 + t * 137;
-        x = 37 + 30 * t - 9 * Math.sin(Math.PI * t) + Math.cos(angle) * width;
-      }
-      points.push({ x, y, depth, region });
+  if (!nodes.length) return;
+  const boundary = Array.from({ length: 180 }, (_, i) => outline(i / 180 * Math.PI * 2));
+  const inside = (x, y) => {
+    let cortexHit = false;
+    for (let i = 0, j = boundary.length - 1; i < boundary.length; j = i++) {
+      const [ax, ay] = boundary[i], [bx, by] = boundary[j];
+      if ((ay > y) !== (by > y) && x < (bx - ax) * (y - ay) / (by - ay) + ax) cortexHit = !cortexHit;
     }
-  }
-  // Morton ordering keeps families spatially close without the old striped rows.
-  const spatialKey = (point) => {
-    const x = Math.round((point.x + 320) / 640 * 1023);
-    const y = Math.round((point.y + 260) / 540 * 1023);
-    let key = 0;
-    for (let bit = 0; bit < 10; bit++) key |= ((x >> bit) & 1) << (bit * 2) | ((y >> bit) & 1) << (bit * 2 + 1);
-    return key;
+    const cerebellum = ((x - 148) / 88) ** 2 + ((y - 124 + (x - 148) * 0.16) / 54) ** 2 < 1;
+    const t = (y - 85) / 120;
+    const stem = t >= 0 && t <= 1 && Math.abs(x - (46 + 28 * t - 9 * Math.sin(Math.PI * t))) < 25 * (1 - t) + 9 * t + 8 * Math.sin(Math.PI * t);
+    return cortexHit || cerebellum || stem;
   };
-  points.forEach((point) => { point.key = spatialKey(point); });
-  points.sort((a, b) => a.region - b.region || a.key - b.key);
-  // Place each note near the center of its own linked memories, not at one end.
-  for (let i = 0; i < nodes.length; i++) {
-    if (nodes[i].kind !== "note") continue;
-    const count = nodes[i].neighbors.size + 1;
-    const family = points.slice(i, i + count);
-    const cx = family.reduce((sum, p) => sum + p.x, 0) / count;
-    const cy = family.reduce((sum, p) => sum + p.y, 0) / count;
-    let nearest = i;
-    for (let j = i + 1; j < i + count; j++) {
-      if (Math.hypot(points[j].x - cx, points[j].y - cy) < Math.hypot(points[nearest].x - cx, points[nearest].y - cy)) nearest = j;
+  const hash = (text) => {
+    let value = 2166136261;
+    for (const char of text) value = Math.imul(value ^ char.charCodeAt(0), 16777619);
+    value ^= value >>> 16;
+    value = Math.imul(value, 0x7feb352d);
+    value ^= value >>> 15;
+    return value >>> 0;
+  };
+  // Poisson-style spacing removes lattice rows without creating clumps.
+  // Spatial buckets keep distance checks local even for large collections.
+  const sample = (spacing) => {
+    const result = [];
+    const buckets = new Map();
+    for (let i = 0; i < nodes.length * 60 && result.length < nodes.length; i++) {
+      const x = -310 + hash(`x:${i}`) / 4294967296 * 600;
+      const y = -240 + hash(`y:${i}`) / 4294967296 * 450;
+      if (!inside(x, y)) continue;
+      const col = Math.floor(x / spacing), row = Math.floor(y / spacing);
+      let clear = true;
+      for (let dx = -1; dx <= 1 && clear; dx++) {
+        for (let dy = -1; dy <= 1 && clear; dy++) {
+          for (const point of buckets.get(`${col + dx}:${row + dy}`) || []) {
+            if ((point.x - x) ** 2 + (point.y - y) ** 2 < spacing * spacing) { clear = false; break; }
+          }
+        }
+      }
+      if (!clear) continue;
+      // Lighting varies smoothly across the face; density stays uniform.
+      const volume = Math.sqrt(Math.max(0, 1 - (x / 320) ** 2 - ((y + 50) / 280) ** 2));
+      const point = { x, y, depth: 0.1 + volume * 0.7, seed: hash(`point:${i}`) };
+      result.push(point);
+      const key = `${col}:${row}`;
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key).push(point);
     }
-    [points[i], points[nearest]] = [points[nearest], points[i]];
-    // Morton cells and anatomical regions have discontinuities. Keep those
-    // boundaries from stretching a real memory link across the whole brain.
-    const anchor = points[i];
-    for (let j = i + 1; j < i + count; j++) {
-      const point = points[j];
-      const distance = Math.hypot(point.x - anchor.x, point.y - anchor.y);
-      if (distance <= 42) continue;
-      // Compress smoothly rather than stacking distant memories on one ring.
-      const radius = 42 + 13 * (1 - Math.exp(-(distance - 42) / 32));
-      const ratio = radius / distance;
-      point.x = anchor.x + (point.x - anchor.x) * ratio;
-      point.y = anchor.y + (point.y - anchor.y) * ratio;
-      point.depth = anchor.depth + (point.depth - anchor.depth) * ratio;
-    }
-    i += count - 1;
-  }
-  nodes.forEach((node, i) => Object.assign(node, points[i], { fx: points[i].x, fy: points[i].y }));
+    return result;
+  };
+  let spacing = Math.sqrt(160000 / nodes.length) * 0.7;
+  let points = sample(spacing);
+  while (points.length < nodes.length) { spacing *= 0.9; points = sample(spacing); }
+  // Shuffle positions independently of project and note-family input order.
+  points.sort((a, b) => a.seed - b.seed);
+  const ordered = [...nodes].sort((a, b) => hash(a.id) - hash(b.id) || a.id.localeCompare(b.id));
+  ordered.forEach((node, i) => {
+    const point = points[Math.floor(i * points.length / nodes.length)];
+    Object.assign(node, { x: point.x, y: point.y, depth: point.depth, fx: point.x, fy: point.y });
+  });
 }
 
 export async function mountGraph(view, data, { brain = false, openProject } = {}) {
   const projects = brain ? [...data].sort((a, b) => a.slug.localeCompare(b.slug))
     .map((entry, i) => ({ ...entry, color: `hsl(${178 + i * 17 % 42} 80% 82%)` })) : [];
   const graphs = brain ? projects.map((project) => graphData(project.data, project)) : [graphData(data)];
-  const nodes = graphs.flatMap((graph) => {
-    if (!brain) return graph.nodes;
-    const byId = new Map(graph.nodes.map((node) => [node.id, node]));
-    const ordered = [];
-    for (const note of graph.nodes.filter((node) => node.kind === "note")) {
-      ordered.push(note, ...[...note.neighbors].map((id) => byId.get(id)));
-    }
-    return ordered.concat(graph.nodes.filter((node) => node.kind === "memory" && !node.neighbors.size));
-  });
+  const nodes = graphs.flatMap((graph) => graph.nodes);
   const links = graphs.flatMap((graph) => graph.links);
   if (brain) brainLayout(nodes);
   if (!nodes.length && !brain) {
@@ -233,7 +215,7 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
     const bright = focused(node);
     const r = radius(node, scale);
     ctx.save();
-    ctx.globalAlpha = bright ? (brain ? 0.5 + (node.depth + 1) * 0.25 : 1) : 0.12;
+    ctx.globalAlpha = bright ? (brain ? 0.5 + node.depth * 0.5 : 1) : 0.12;
     ctx.shadowColor = "#8deaff";
     ctx.shadowBlur = (node.kind === "note" ? 13 : 7) + (node.pulse || 0) * 9;
     if (bright) ctx.globalAlpha = Math.min(1, ctx.globalAlpha + (node.pulse || 0) * 0.2);
@@ -297,14 +279,18 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
     });
   {
     const byId = new Map(nodes.map((node) => [node.id, node]));
-    links.forEach((link, i) => { link.signalPhase = i % 7 === 0 ? (i * 0.61803398875) % 1 : null; });
+    links.forEach((link, i) => { link.signalPhase = i % (brain ? 13 : 7) === 0 ? (i * 0.61803398875) % 1 : null; });
     graph.linkCanvasObject((link, ctx, scale) => {
       const source = typeof link.source === "object" ? link.source : byId.get(link.source);
       const target = typeof link.target === "object" ? link.target : byId.get(link.target);
       if (!source || !target || ![source.x, source.y, target.x, target.y].every(Number.isFinite)) return;
       const active = hovered || selected;
       const highlighted = active && (source === active || target === active);
-      const opacity = active ? (highlighted ? 0.95 : 0.035) : 0.22 + ((source.depth || 0) + (target.depth || 0) + 2) * 0.12;
+      // Dense note families stay legible without dominating the whole surface.
+      const crowding = brain ? Math.min(1, Math.sqrt(10 / Math.max(1, target.neighbors.size))) : 1;
+      const distance = Math.hypot(target.x - source.x, target.y - source.y);
+      const opacity = active ? (highlighted ? 0.95 : 0.035) : (0.22 + ((source.depth || 0) + (target.depth || 0) + 2) * 0.12)
+        * crowding * (brain ? Math.min(1, (45 / Math.max(45, distance)) ** 1.8) : 1);
       ctx.save();
       ctx.beginPath();
       ctx.moveTo(source.x, source.y);
@@ -328,7 +314,7 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
           const tail = Math.max(0, t - Math.min(0.35, 14 / Math.max(1, length * scale)));
           const tailX = source.x + (target.x - source.x) * tail;
           const tailY = source.y + (target.y - source.y) * tail;
-          ctx.globalAlpha = Math.min(1, Math.sin(Math.PI * t) * 1.6);
+          ctx.globalAlpha = Math.min(1, Math.sin(Math.PI * t) * 1.6) * (brain && !highlighted ? 0.7 : 1);
           const trail = ctx.createLinearGradient(tailX, tailY, x, y);
           trail.addColorStop(0, "#79e3ff00");
           trail.addColorStop(1, "#b9f4ff");
@@ -342,7 +328,7 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
           ctx.shadowColor = "#79e3ff";
           ctx.shadowBlur = 18;
           ctx.beginPath();
-          ctx.arc(x, y, 3.2 / scale, 0, Math.PI * 2);
+          ctx.arc(x, y, (brain ? 2.2 : 3.2) / scale, 0, Math.PI * 2);
           ctx.fill();
         }
       }
@@ -364,6 +350,8 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
     graph.nodeCanvasObject(paint);
     graph.linkColor(graph.linkColor());
   }
+  const clearHover = () => { hovered = null; host.style.cursor = "grab"; redraw(); };
+  host.addEventListener("pointerleave", clearHover);
 
   function animate(time) {
     if (disposed) return;
@@ -446,6 +434,7 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
     document.removeEventListener("visibilitychange", handleActivation);
     window.removeEventListener("resize", refit);
     resize.disconnect();
+    host.removeEventListener("pointerleave", clearHover);
     graph._destructor();
   };
 }
