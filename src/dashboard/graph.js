@@ -34,28 +34,37 @@ function brainLayout(nodes) {
   const cortex = [[-300,-30],[-283,-108],[-225,-177],[-128,-219],[-12,-231],
     [107,-212],[210,-165],[269,-91],[284,-3],[260,64],[200,87],
     [123,65],[58,64],[3,111],[-81,119],[-152,92],[-186,47],[-251,37]];
-  const outline = (angle) => {
-    const t = angle / (Math.PI * 2) * cortex.length;
+  // The reference's lower lobe sits partly behind the cortex, with a narrow
+  // sloping seam rather than a detached bean and a deep empty cutout.
+  const cerebellum = [[35,103],[48,73],[73,57],[106,58],[140,65],
+    [174,77],[205,86],[221,108],[216,131],[194,148],[162,157],
+    [129,156],[96,147],[68,132],[46,118]];
+  const outline = (angle, contour) => {
+    const t = angle / (Math.PI * 2) * contour.length;
     const index = Math.floor(t);
     const f = t - index;
-    const p = (offset) => cortex[(index + offset + cortex.length) % cortex.length];
+    const p = (offset) => contour[(index + offset + contour.length) % contour.length];
     return [0, 1].map((axis) => 0.5 * ((2 * p(0)[axis]) +
       (-p(-1)[axis] + p(1)[axis]) * f +
       (2 * p(-1)[axis] - 5 * p(0)[axis] + 4 * p(1)[axis] - p(2)[axis]) * f * f +
       (-p(-1)[axis] + 3 * p(0)[axis] - 3 * p(1)[axis] + p(2)[axis]) * f * f * f));
   };
   if (!nodes.length) return;
-  const boundary = Array.from({ length: 180 }, (_, i) => outline(i / 180 * Math.PI * 2));
+  const boundaries = [cortex, cerebellum].map((contour) =>
+    Array.from({ length: 180 }, (_, i) => outline(i / 180 * Math.PI * 2, contour)));
   const inside = (x, y) => {
-    let cortexHit = false;
-    for (let i = 0, j = boundary.length - 1; i < boundary.length; j = i++) {
-      const [ax, ay] = boundary[i], [bx, by] = boundary[j];
-      if ((ay > y) !== (by > y) && x < (bx - ax) * (y - ay) / (by - ay) + ax) cortexHit = !cortexHit;
-    }
-    const cerebellum = ((x - 148) / 88) ** 2 + ((y - 124 + (x - 148) * 0.16) / 54) ** 2 < 1;
-    const t = (y - 85) / 120;
-    const stem = t >= 0 && t <= 1 && Math.abs(x - (46 + 28 * t - 9 * Math.sin(Math.PI * t))) < 25 * (1 - t) + 9 * t + 8 * Math.sin(Math.PI * t);
-    return cortexHit || cerebellum || stem;
+    // A fine, tapered fissure separates the overlapping lobes visually, while
+    // both ends stay attached. It replaces the large bean-shaped cutout.
+    const seam = (x - 65) / 140;
+    if (seam > 0 && seam < 1 && Math.abs(y - (71 + 0.0015 * (x - 90) ** 2)) < 3 * Math.sin(Math.PI * seam)) return false;
+    return boundaries.some((boundary) => {
+      let hit = false;
+      for (let i = 0, j = boundary.length - 1; i < boundary.length; j = i++) {
+        const [ax, ay] = boundary[i], [bx, by] = boundary[j];
+        if ((ay > y) !== (by > y) && x < (bx - ax) * (y - ay) / (by - ay) + ax) hit = !hit;
+      }
+      return hit;
+    });
   };
   const hash = (text) => {
     let value = 2166136261;
@@ -104,6 +113,7 @@ function brainLayout(nodes) {
     const point = points[Math.floor(i * points.length / nodes.length)];
     Object.assign(node, { x: point.x, y: point.y, depth: point.depth, fx: point.x, fy: point.y });
   });
+  return inside;
 }
 
 export async function mountGraph(view, data, { brain = false, openProject } = {}) {
@@ -112,7 +122,7 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
   const graphs = brain ? projects.map((project) => graphData(project.data, project)) : [graphData(data)];
   const nodes = graphs.flatMap((graph) => graph.nodes);
   const links = graphs.flatMap((graph) => graph.links);
-  if (brain) brainLayout(nodes);
+  const insideBrain = brain ? brainLayout(nodes) : null;
   if (!nodes.length && !brain) {
     view.innerHTML = '<div class="empty">No notes or memories to graph yet. Existing memory links will appear here automatically.</div>';
     return;
@@ -219,6 +229,7 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
     ctx.shadowColor = "#8deaff";
     ctx.shadowBlur = (node.kind === "note" ? 13 : 7) + (node.pulse || 0) * 9;
     if (bright) ctx.globalAlpha = Math.min(1, ctx.globalAlpha + (node.pulse || 0) * 0.2);
+    if (brain && bright && !active) ctx.globalAlpha *= 0.88 + Math.min(1, node.depth / 0.8) * 0.12;
     if (active) {
       ctx.beginPath();
       ctx.arc(node.x, node.y, r + 4 / scale, 0, Math.PI * 2);
@@ -280,6 +291,27 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
   {
     const byId = new Map(nodes.map((node) => [node.id, node]));
     links.forEach((link, i) => { link.signalPhase = i % (brain ? 13 : 7) === 0 ? (i * 0.61803398875) % 1 : null; });
+    if (insideBrain) {
+      for (const link of links) {
+        const source = byId.get(link.source), target = byId.get(link.target);
+        const steps = Math.max(2, Math.ceil(Math.hypot(target.x - source.x, target.y - source.y) / 4));
+        link.surfaceVisibility = Array.from({ length: steps + 1 }, (_, i) => {
+          const t = i / steps;
+          return insideBrain(source.x + (target.x - source.x) * t, source.y + (target.y - source.y) * t) ? 1 : 0.12;
+        });
+        const reach = Math.min(0.25, 24 / Math.max(1, Math.hypot(target.x - source.x, target.y - source.y)));
+        const stops = new Set([0, reach, 1 - reach, 1]);
+        link.surfaceVisibility.forEach((value, i, samples) => {
+          if (i && value !== samples[i - 1]) { stops.add((i - 1) / steps); stops.add(i / steps); }
+        });
+        link.surfaceStops = [...stops].sort((a, b) => a - b).map((t) => {
+          const position = t * steps, index = Math.floor(position);
+          const samples = link.surfaceVisibility;
+          const visibility = samples[index] + ((samples[index + 1] ?? samples[index]) - samples[index]) * (position - index);
+          return { t, visibility };
+        });
+      }
+    }
     graph.linkCanvasObject((link, ctx, scale) => {
       const source = typeof link.source === "object" ? link.source : byId.get(link.source);
       const target = typeof link.target === "object" ? link.target : byId.get(link.target);
@@ -298,14 +330,30 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
       ctx.strokeStyle = "#54cfff";
       ctx.globalAlpha = opacity * 0.16;
       ctx.lineWidth = 4 / scale;
-      ctx.stroke();
+      if (!brain || active) ctx.stroke();
       ctx.strokeStyle = highlighted ? "#ffffff" : link.color || colors.memory;
       ctx.globalAlpha = opacity;
+      if (brain && !active && distance > 0) {
+        // Keep a visible connection at each neuron, including the silhouette,
+        // while long crossings through the center remain subdued.
+        const endpointOpacity = Math.max(opacity, 0.28 * crowding);
+        const reach = Math.min(0.25, 24 / distance);
+        const connection = ctx.createLinearGradient(source.x, source.y, target.x, target.y);
+        link.surfaceStops.forEach(({ t, visibility }) => {
+          const endpoint = Math.max(0, 1 - Math.min(t, 1 - t) / reach);
+          const alpha = (opacity + (endpointOpacity - opacity) * endpoint) * visibility;
+          connection.addColorStop(t, `rgba(172, 240, 255, ${alpha})`);
+        });
+        ctx.strokeStyle = connection;
+        ctx.globalAlpha = 1;
+      }
       ctx.lineWidth = (highlighted ? 1.3 : 0.75) / scale;
       ctx.stroke();
       // Visual activity follows real links without modifying the layout.
       if (!motionPreference.matches && link.signalPhase !== null && (!active || highlighted)) {
-        const progress = (motionTime / 8 + link.signalPhase) % 1;
+        // Longer connections get more travel time rather than faster signals.
+        const cycle = brain ? Math.max(18, distance / 16 / 0.75) : 8;
+        const progress = (motionTime / cycle + link.signalPhase) % 1;
         if (progress < 0.75) {
           const t = progress / 0.75;
           const x = source.x + (target.x - source.x) * t;
@@ -315,6 +363,12 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
           const tailX = source.x + (target.x - source.x) * tail;
           const tailY = source.y + (target.y - source.y) * tail;
           ctx.globalAlpha = Math.min(1, Math.sin(Math.PI * t) * 1.6) * (brain && !highlighted ? 0.7 : 1);
+          if (brain && !highlighted) {
+            const samples = link.surfaceVisibility;
+            const position = t * (samples.length - 1);
+            const index = Math.floor(position);
+            ctx.globalAlpha *= samples[index] + ((samples[index + 1] ?? samples[index]) - samples[index]) * (position - index);
+          }
           const trail = ctx.createLinearGradient(tailX, tailY, x, y);
           trail.addColorStop(0, "#79e3ff00");
           trail.addColorStop(1, "#b9f4ff");
