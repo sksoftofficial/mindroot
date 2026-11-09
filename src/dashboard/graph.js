@@ -1,5 +1,75 @@
 let library;
 
+// Shadows use device pixels, independently of the graph's zoom transform.
+// Cache just the glow so the crisp dot keeps its exact radius and project color.
+function createGlowPainter() {
+  const sprites = new Map();
+  const pages = [];
+  let clock = 0;
+  const pageSize = 2048;
+  return {
+    paint(ctx, x, y, radius, blur, color, scale) {
+      // Subpixel buckets prevent continuous pulses from growing the cache.
+      const r = Math.round(radius * scale * 8) / 8;
+      const b = Math.round(blur * 4) / 4;
+      const key = `${r}:${b}:${color}`;
+      let sprite = sprites.get(key);
+      if (!sprite) {
+        const padding = Math.ceil(b * 2 + r + 2);
+        const size = padding * 2;
+        let page = pages.find((entry) => entry.x + size <= pageSize && entry.y + Math.max(entry.rowHeight, size) <= pageSize);
+        if (!page) {
+          page = pages.find((entry) => entry.y + entry.rowHeight + size <= pageSize);
+          if (page) { page.y += page.rowHeight; page.x = 0; page.rowHeight = 0; }
+        }
+        if (!page) {
+          // Two texture-atlas pages bound memory to 32 MiB and avoid thousands
+          // of separate GPU textures. Evict a whole least-recently-used page.
+          if (pages.length < 2) {
+            const canvas = document.createElement("canvas");
+            canvas.width = canvas.height = pageSize;
+            page = { canvas, context: canvas.getContext("2d"), keys: [] };
+            pages.push(page);
+          } else {
+            page = pages.reduce((oldest, entry) => entry.used < oldest.used ? entry : oldest);
+            for (const oldKey of page.keys) sprites.delete(oldKey);
+            page.keys.length = 0;
+            page.context.clearRect(0, 0, pageSize, pageSize);
+          }
+          Object.assign(page, { x: 0, y: 0, rowHeight: 0 });
+        }
+        const context = page.context;
+        context.save();
+        context.beginPath();
+        context.rect(page.x, page.y, size, size);
+        context.clip();
+        // Place the source outside the bitmap, leaving only its shadow inside.
+        context.shadowColor = color;
+        context.shadowBlur = b;
+        context.shadowOffsetX = pageSize * 2;
+        context.beginPath();
+        context.arc(page.x + padding - context.shadowOffsetX, page.y + padding, r, 0, Math.PI * 2);
+        context.fill();
+        context.restore();
+        sprite = { page, x: page.x, y: page.y, padding, size };
+        page.x += size;
+        page.rowHeight = Math.max(page.rowHeight, size);
+        page.keys.push(key);
+        sprites.set(key, sprite);
+      }
+      sprite.page.used = ++clock;
+      ctx.drawImage(sprite.page.canvas, sprite.x, sprite.y, sprite.size, sprite.size,
+        x - sprite.padding / scale, y - sprite.padding / scale,
+        sprite.size / scale, sprite.size / scale);
+    },
+    clear() {
+      sprites.clear();
+      for (const page of pages) page.canvas.width = page.canvas.height = 0;
+      pages.length = 0;
+    },
+  };
+}
+
 function graphData(data, project = null) {
   const prefix = project ? JSON.stringify(project.slug) + ":" : "";
   const notes = new Map(data.docs.map((doc) => [doc.path, {
@@ -212,7 +282,12 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
   let revealFrame;
   let motionFrame;
   let lastMotionTime = null;
+  let motionRemainder = 0;
   let motionTime = 0;
+  const glows = brain ? createGlowPainter() : null;
+  let renderPixelScale = 1;
+  let motionCanvas;
+  let drawMotion = () => {};
   const radius = (node, scale = 1) => node.kind === "note"
     ? (brain ? 1.6 + (node.depth + 1) * 0.45 : Math.max(4 / scale, 5 + Math.min(5, Math.sqrt(node.neighbors.size))))
     : (brain ? 0.65 + (node.depth + 1) * 0.4 : Math.max(2 / scale, 3.5));
@@ -224,10 +299,12 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
     const active = hovered === node || selected === node;
     const bright = focused(node);
     const r = radius(node, scale);
-    ctx.save();
+    // Atlas owns its animation context, so avoid saving the entire canvas
+    // state thousands of times per frame. Project callbacks share a context.
+    if (!brain) ctx.save();
     ctx.globalAlpha = bright ? (brain ? 0.5 + node.depth * 0.5 : 1) : 0.12;
-    ctx.shadowColor = "#8deaff";
-    ctx.shadowBlur = (node.kind === "note" ? 13 : 7) + (node.pulse || 0) * 9;
+    const blur = (node.kind === "note" ? 13 : 7) + (node.pulse || 0) * 9;
+    if (!glows || active) { ctx.shadowColor = "#8deaff"; ctx.shadowBlur = blur; }
     if (bright) ctx.globalAlpha = Math.min(1, ctx.globalAlpha + (node.pulse || 0) * 0.2);
     if (brain && bright && !active) ctx.globalAlpha *= 0.88 + Math.min(1, node.depth / 0.8) * 0.12;
     if (active) {
@@ -236,6 +313,10 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
       ctx.strokeStyle = node.project?.color || colors[node.kind];
       ctx.lineWidth = 1.5 / scale;
       ctx.stroke();
+    }
+    if (glows) {
+      ctx.shadowBlur = 0;
+      glows.paint(ctx, node.x, node.y, r, blur, "#8deaff", renderPixelScale);
     }
     ctx.beginPath();
     ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
@@ -256,14 +337,15 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
       ctx.fillStyle = active ? "#fff" : "#c4c4c4";
       ctx.fillText(text, node.x, y);
     }
-    ctx.restore();
+    if (!brain) ctx.restore();
   };
 
+  const paintNodes = brain ? () => {} : paint;
   const graph = new ForceGraph(host)
     .width(host.clientWidth).height(host.clientHeight)
     .backgroundColor("#00000000")
     .nodeLabel(() => "")
-    .nodeCanvasObject(paint)
+    .nodeCanvasObject(paintNodes)
     .nodePointerAreaPaint((node, color, ctx, scale) => {
       ctx.beginPath();
       ctx.arc(node.x, node.y, radius(node, scale) + 5 / scale, 0, Math.PI * 2);
@@ -312,7 +394,7 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
         });
       }
     }
-    graph.linkCanvasObject((link, ctx, scale) => {
+    const paintLink = (link, ctx, scale, connections = true, signals = true) => {
       const source = typeof link.source === "object" ? link.source : byId.get(link.source);
       const target = typeof link.target === "object" ? link.target : byId.get(link.target);
       if (!source || !target || ![source.x, source.y, target.x, target.y].every(Number.isFinite)) return;
@@ -324,33 +406,35 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
       const opacity = active ? (highlighted ? 0.95 : 0.035) : (0.22 + ((source.depth || 0) + (target.depth || 0) + 2) * 0.12)
         * crowding * (brain ? Math.min(1, (45 / Math.max(45, distance)) ** 1.8) : 1);
       ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(source.x, source.y);
-      ctx.lineTo(target.x, target.y);
-      ctx.strokeStyle = "#54cfff";
-      ctx.globalAlpha = opacity * 0.16;
-      ctx.lineWidth = 4 / scale;
-      if (!brain || active) ctx.stroke();
-      ctx.strokeStyle = highlighted ? "#ffffff" : link.color || colors.memory;
-      ctx.globalAlpha = opacity;
-      if (brain && !active && distance > 0) {
-        // Keep a visible connection at each neuron, including the silhouette,
-        // while long crossings through the center remain subdued.
-        const endpointOpacity = Math.max(opacity, 0.28 * crowding);
-        const reach = Math.min(0.25, 24 / distance);
-        const connection = ctx.createLinearGradient(source.x, source.y, target.x, target.y);
-        link.surfaceStops.forEach(({ t, visibility }) => {
-          const endpoint = Math.max(0, 1 - Math.min(t, 1 - t) / reach);
-          const alpha = (opacity + (endpointOpacity - opacity) * endpoint) * visibility;
-          connection.addColorStop(t, `rgba(172, 240, 255, ${alpha})`);
-        });
-        ctx.strokeStyle = connection;
-        ctx.globalAlpha = 1;
+      if (connections) {
+        ctx.beginPath();
+        ctx.moveTo(source.x, source.y);
+        ctx.lineTo(target.x, target.y);
+        ctx.strokeStyle = "#54cfff";
+        ctx.globalAlpha = opacity * 0.16;
+        ctx.lineWidth = 4 / scale;
+        if (!brain || active) ctx.stroke();
+        ctx.strokeStyle = highlighted ? "#ffffff" : link.color || colors.memory;
+        ctx.globalAlpha = opacity;
+        if (brain && !active && distance > 0) {
+          // Keep a visible connection at each neuron, including the silhouette,
+          // while long crossings through the center remain subdued.
+          const endpointOpacity = Math.max(opacity, 0.28 * crowding);
+          const reach = Math.min(0.25, 24 / distance);
+          const connection = ctx.createLinearGradient(source.x, source.y, target.x, target.y);
+          link.surfaceStops.forEach(({ t, visibility }) => {
+            const endpoint = Math.max(0, 1 - Math.min(t, 1 - t) / reach);
+            const alpha = (opacity + (endpointOpacity - opacity) * endpoint) * visibility;
+            connection.addColorStop(t, `rgba(172, 240, 255, ${alpha})`);
+          });
+          ctx.strokeStyle = connection;
+          ctx.globalAlpha = 1;
+        }
+        ctx.lineWidth = (highlighted ? 1.3 : 0.75) / scale;
+        ctx.stroke();
       }
-      ctx.lineWidth = (highlighted ? 1.3 : 0.75) / scale;
-      ctx.stroke();
       // Visual activity follows real links without modifying the layout.
-      if (!motionPreference.matches && link.signalPhase !== null && (!active || highlighted)) {
+      if (signals && !motionPreference.matches && link.signalPhase !== null && (!active || highlighted)) {
         // Longer connections get more travel time rather than faster signals.
         const cycle = brain ? Math.max(18, distance / 16 / 0.75) : 8;
         const progress = (motionTime / cycle + link.signalPhase) % 1;
@@ -381,13 +465,55 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
           ctx.fillStyle = "#f0ffff";
           ctx.shadowColor = "#79e3ff";
           ctx.shadowBlur = 18;
+          if (glows) {
+            ctx.shadowBlur = 0;
+            glows.paint(ctx, x, y, 2.2 / scale, 18, "#79e3ff", renderPixelScale);
+          }
           ctx.beginPath();
           ctx.arc(x, y, (brain ? 2.2 : 3.2) / scale, 0, Math.PI * 2);
           ctx.fill();
         }
       }
       ctx.restore();
-    });
+    };
+    if (brain) {
+      // ForceGraph's canvas retains the fixed connections and hit-test map.
+      // Only this pointer-transparent layer repaints during idle animation.
+      motionCanvas = document.createElement("canvas");
+      motionCanvas.setAttribute("aria-hidden", "true");
+      Object.assign(motionCanvas.style, { position: "absolute", left: "0", top: "0", pointerEvents: "none" });
+      host.querySelector(".force-graph-container").append(motionCanvas);
+      const context = motionCanvas.getContext("2d");
+      const signals = links.filter((link) => link.signalPhase !== null);
+      let camera;
+      let cameraScale = 1;
+      drawMotion = () => {
+        if (disposed || !camera) return;
+        context.resetTransform();
+        context.clearRect(0, 0, motionCanvas.width, motionCanvas.height);
+        context.setTransform(camera);
+        renderPixelScale = Math.hypot(camera.a, camera.b);
+        for (const link of signals) paintLink(link, context, cameraScale, false, true);
+        for (const node of nodes) paint(node, context, cameraScale);
+        context.globalAlpha = 1;
+      };
+      graph.linkCanvasObject((link, ctx, scale) => paintLink(link, ctx, scale, true, false));
+      graph.onRenderFramePost((ctx, scale) => {
+        if (motionCanvas.width !== ctx.canvas.width || motionCanvas.height !== ctx.canvas.height) {
+          motionCanvas.width = ctx.canvas.width;
+          motionCanvas.height = ctx.canvas.height;
+        }
+        motionCanvas.style.width = ctx.canvas.style.width;
+        motionCanvas.style.height = ctx.canvas.style.height;
+        camera = ctx.getTransform();
+        cameraScale = scale;
+        // While animating, the next motion frame uses this camera. Static and
+        // reduced-motion views still repaint immediately after interactions.
+        if (motionPreference.matches || document.hidden || host.style.visibility !== "visible") drawMotion();
+      });
+    } else {
+      graph.linkCanvasObject(paintLink);
+    }
   }
   graph.d3Force("charge").strength(-90);
   graph.d3Force("link").distance(55);
@@ -401,8 +527,7 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
   graph.graphData({ nodes, links });
 
   function redraw() {
-    graph.nodeCanvasObject(paint);
-    graph.linkColor(graph.linkColor());
+    graph.nodeCanvasObject(paintNodes);
   }
   const clearHover = () => { hovered = null; host.style.cursor = "grab"; redraw(); };
   host.addEventListener("pointerleave", clearHover);
@@ -412,19 +537,24 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
     motionFrame = requestAnimationFrame(animate);
     if (lastMotionTime === null) { lastMotionTime = time; return; }
     const elapsed = time - lastMotionTime;
-    if (elapsed < 1000 / 30) return;
     lastMotionTime = time;
     motionTime += elapsed / 1000;
+    motionRemainder += elapsed;
+    const interval = 1000 / (brain ? 60 : 30);
+    if (motionRemainder + 0.001 < interval) return;
+    motionRemainder = Math.max(0, motionRemainder - Math.floor((motionRemainder + 0.001) / interval) * interval);
     nodes.forEach((node, i) => {
       const phase = i * 2.3999632297;
       node.pulse = Math.max(0, Math.sin(motionTime * 0.65 + phase)) ** 8;
     });
-    redraw();
+    if (brain) drawMotion();
+    else redraw();
   }
 
   function updateMotion() {
     cancelAnimationFrame(motionFrame);
     lastMotionTime = null;
+    motionRemainder = 0;
     if (disposed) return;
     if (motionPreference.matches) {
       for (const node of nodes) node.pulse = 0;
@@ -489,6 +619,11 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
     window.removeEventListener("resize", refit);
     resize.disconnect();
     host.removeEventListener("pointerleave", clearHover);
+    host.removeEventListener("wheel", markAdjusted, true);
+    host.removeEventListener("pointerdown", markAdjusted, true);
+    graph.onRenderFramePost(null);
+    if (motionCanvas) { motionCanvas.width = motionCanvas.height = 0; motionCanvas.remove(); }
+    glows?.clear();
     graph._destructor();
   };
 }
