@@ -6,16 +6,20 @@ function createGlowPainter() {
   const sprites = new Map();
   const pages = [];
   let clock = 0;
-  const pageSize = 2048;
+  const pageSize = 1024;
+  const maxPages = 8;
+  const spriteBlur = 16;
   return {
-    paint(ctx, x, y, radius, blur, color, scale) {
-      // Subpixel buckets prevent continuous pulses from growing the cache.
-      const r = Math.round(radius * scale * 8) / 8;
+    prepare(radius, blur, color, scale) {
+      // A blurred disk is scale-invariant: cache its radius/blur ratio, rather
+      // than a separate sprite for every zoom radius AND pulse blur. Zoom and
+      // pulses can then reuse the same small family of normalized shadows.
       const b = Math.round(blur * 4) / 4;
-      const key = `${r}:${b}:${color}`;
+      const r = Math.round(radius * scale * spriteBlur / b * 16) / 16;
+      const key = `${r}:${color}`;
       let sprite = sprites.get(key);
       if (!sprite) {
-        const padding = Math.ceil(b * 2 + r + 2);
+        const padding = Math.ceil(spriteBlur * 2 + r + 2);
         const size = padding * 2;
         let page = pages.find((entry) => entry.x + size <= pageSize && entry.y + Math.max(entry.rowHeight, size) <= pageSize);
         if (!page) {
@@ -23,9 +27,9 @@ function createGlowPainter() {
           if (page) { page.y += page.rowHeight; page.x = 0; page.rowHeight = 0; }
         }
         if (!page) {
-          // Two texture-atlas pages bound memory to 32 MiB and avoid thousands
-          // of separate GPU textures. Evict a whole least-recently-used page.
-          if (pages.length < 2) {
+          // Smaller pages limit cold-cache texture uploads; total pixel
+          // storage remains bounded to 32 MiB with page-level LRU eviction.
+          if (pages.length < maxPages) {
             const canvas = document.createElement("canvas");
             canvas.width = canvas.height = pageSize;
             page = { canvas, context: canvas.getContext("2d"), keys: [] };
@@ -45,7 +49,7 @@ function createGlowPainter() {
         context.clip();
         // Place the source outside the bitmap, leaving only its shadow inside.
         context.shadowColor = color;
-        context.shadowBlur = b;
+        context.shadowBlur = spriteBlur;
         context.shadowOffsetX = pageSize * 2;
         context.beginPath();
         context.arc(page.x + padding - context.shadowOffsetX, page.y + padding, r, 0, Math.PI * 2);
@@ -58,9 +62,14 @@ function createGlowPainter() {
         sprites.set(key, sprite);
       }
       sprite.page.used = ++clock;
+      return sprite;
+    },
+    paint(ctx, x, y, radius, blur, color, scale) {
+      const sprite = this.prepare(radius, blur, color, scale);
+      const sizeScale = (Math.round(blur * 4) / 4) / spriteBlur / scale;
       ctx.drawImage(sprite.page.canvas, sprite.x, sprite.y, sprite.size, sprite.size,
-        x - sprite.padding / scale, y - sprite.padding / scale,
-        sprite.size / scale, sprite.size / scale);
+        x - sprite.padding * sizeScale, y - sprite.padding * sizeScale,
+        sprite.size * sizeScale, sprite.size * sizeScale);
     },
     clear() {
       sprites.clear();
@@ -69,6 +78,9 @@ function createGlowPainter() {
     },
   };
 }
+
+// Yield a task (not just a microtask) so input and painting can run during setup.
+const yieldToBrowser = () => globalThis.scheduler?.yield?.() ?? new Promise((resolve) => setTimeout(resolve, 0));
 
 function graphData(data, project = null) {
   const prefix = project ? JSON.stringify(project.slug) + ":" : "";
@@ -98,7 +110,7 @@ function graphData(data, project = null) {
 }
 
 // A layout constraint only: coordinates never create graph edges.
-function brainLayout(nodes) {
+async function brainLayout(nodes, isCancelled = () => false) {
   // Side-profile cortex, filled uniformly in screen space. These are layout guides,
   // never visible geometry: every rendered point is a real note or memory.
   const cortex = [[-300,-30],[-283,-108],[-225,-177],[-128,-219],[-12,-231],
@@ -122,15 +134,27 @@ function brainLayout(nodes) {
   if (!nodes.length) return;
   const boundaries = [cortex, cerebellum].map((contour) =>
     Array.from({ length: 180 }, (_, i) => outline(i / 180 * Math.PI * 2, contour)));
+  // Index polygon edges by scanline. The exact crossing test stays unchanged,
+  // but each containment query visits only edges near its y coordinate.
+  const scanlines = boundaries.map((boundary) => {
+    const rows = new Map();
+    for (let i = 0, j = boundary.length - 1; i < boundary.length; j = i++) {
+      const [ax, ay] = boundary[i], [bx, by] = boundary[j];
+      for (let row = Math.floor(Math.min(ay, by)); row <= Math.floor(Math.max(ay, by)); row++) {
+        if (!rows.has(row)) rows.set(row, []);
+        rows.get(row).push([ax, ay, bx, by]);
+      }
+    }
+    return rows;
+  });
   const inside = (x, y) => {
     // A fine, tapered fissure separates the overlapping lobes visually, while
     // both ends stay attached. It replaces the large bean-shaped cutout.
     const seam = (x - 65) / 140;
     if (seam > 0 && seam < 1 && Math.abs(y - (71 + 0.0015 * (x - 90) ** 2)) < 3 * Math.sin(Math.PI * seam)) return false;
-    return boundaries.some((boundary) => {
+    return scanlines.some((rows) => {
       let hit = false;
-      for (let i = 0, j = boundary.length - 1; i < boundary.length; j = i++) {
-        const [ax, ay] = boundary[i], [bx, by] = boundary[j];
+      for (const [ax, ay, bx, by] of rows.get(Math.floor(y)) || []) {
         if ((ay > y) !== (by > y) && x < (bx - ax) * (y - ay) / (by - ay) + ax) hit = !hit;
       }
       return hit;
@@ -146,10 +170,16 @@ function brainLayout(nodes) {
   };
   // Poisson-style spacing removes lattice rows without creating clumps.
   // Spatial buckets keep distance checks local even for large collections.
-  const sample = (spacing) => {
+  let deadline = performance.now() + 8;
+  const sample = async (spacing) => {
     const result = [];
     const buckets = new Map();
     for (let i = 0; i < nodes.length * 60 && result.length < nodes.length; i++) {
+      if (i % 256 === 0 && performance.now() >= deadline) {
+        await yieldToBrowser();
+        if (isCancelled()) return null;
+        deadline = performance.now() + 8;
+      }
       const x = -310 + hash(`x:${i}`) / 4294967296 * 600;
       const y = -240 + hash(`y:${i}`) / 4294967296 * 450;
       if (!inside(x, y)) continue;
@@ -174,16 +204,48 @@ function brainLayout(nodes) {
     return result;
   };
   let spacing = Math.sqrt(160000 / nodes.length) * 0.7;
-  let points = sample(spacing);
-  while (points.length < nodes.length) { spacing *= 0.9; points = sample(spacing); }
+  let points = await sample(spacing);
+  while (points && points.length < nodes.length) { spacing *= 0.9; points = await sample(spacing); }
+  if (!points || isCancelled()) return;
   // Shuffle positions independently of project and note-family input order.
   points.sort((a, b) => a.seed - b.seed);
-  const ordered = [...nodes].sort((a, b) => hash(a.id) - hash(b.id) || a.id.localeCompare(b.id));
-  ordered.forEach((node, i) => {
+  const ordered = nodes.map((node) => ({ node, seed: hash(node.id) }))
+    .sort((a, b) => a.seed - b.seed || a.node.id.localeCompare(b.node.id));
+  ordered.forEach(({ node }, i) => {
     const point = points[Math.floor(i * points.length / nodes.length)];
     Object.assign(node, { x: point.x, y: point.y, depth: point.depth, fx: point.x, fy: point.y });
   });
   return inside;
+}
+
+async function prepareBrainLinks(nodes, links, inside, isCancelled) {
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  let deadline = performance.now() + 8;
+  for (const link of links) {
+    if (performance.now() >= deadline) {
+      await yieldToBrowser();
+      if (isCancelled()) return;
+      deadline = performance.now() + 8;
+    }
+    const source = byId.get(link.source), target = byId.get(link.target);
+    const distance = Math.hypot(target.x - source.x, target.y - source.y);
+    const steps = Math.max(2, Math.ceil(distance / 4));
+    link.surfaceVisibility = Array.from({ length: steps + 1 }, (_, i) => {
+      const t = i / steps;
+      return inside(source.x + (target.x - source.x) * t, source.y + (target.y - source.y) * t) ? 1 : 0.12;
+    });
+    const reach = Math.min(0.25, 24 / Math.max(1, distance));
+    const stops = new Set([0, reach, 1 - reach, 1]);
+    link.surfaceVisibility.forEach((value, i, samples) => {
+      if (i && value !== samples[i - 1]) { stops.add((i - 1) / steps); stops.add(i / steps); }
+    });
+    link.surfaceStops = [...stops].sort((a, b) => a - b).map((t) => {
+      const position = t * steps, index = Math.floor(position);
+      const samples = link.surfaceVisibility;
+      const visibility = samples[index] + ((samples[index + 1] ?? samples[index]) - samples[index]) * (position - index);
+      return { t, visibility };
+    });
+  }
 }
 
 export async function mountGraph(view, data, { brain = false, openProject } = {}) {
@@ -192,7 +254,12 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
   const graphs = brain ? projects.map((project) => graphData(project.data, project)) : [graphData(data)];
   const nodes = graphs.flatMap((graph) => graph.nodes);
   const links = graphs.flatMap((graph) => graph.links);
-  const insideBrain = brain ? brainLayout(nodes) : null;
+  const insideBrain = brain ? await brainLayout(nodes, () => !view.isConnected) : null;
+  if (!view.isConnected) return;
+  if (insideBrain) {
+    await prepareBrainLinks(nodes, links, insideBrain, () => !view.isConnected);
+    if (!view.isConnected) return;
+  }
   if (!nodes.length && !brain) {
     view.innerHTML = '<div class="empty">No notes or memories to graph yet. Existing memory links will appear here automatically.</div>';
     return;
@@ -373,27 +440,6 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
   {
     const byId = new Map(nodes.map((node) => [node.id, node]));
     links.forEach((link, i) => { link.signalPhase = i % (brain ? 13 : 7) === 0 ? (i * 0.61803398875) % 1 : null; });
-    if (insideBrain) {
-      for (const link of links) {
-        const source = byId.get(link.source), target = byId.get(link.target);
-        const steps = Math.max(2, Math.ceil(Math.hypot(target.x - source.x, target.y - source.y) / 4));
-        link.surfaceVisibility = Array.from({ length: steps + 1 }, (_, i) => {
-          const t = i / steps;
-          return insideBrain(source.x + (target.x - source.x) * t, source.y + (target.y - source.y) * t) ? 1 : 0.12;
-        });
-        const reach = Math.min(0.25, 24 / Math.max(1, Math.hypot(target.x - source.x, target.y - source.y)));
-        const stops = new Set([0, reach, 1 - reach, 1]);
-        link.surfaceVisibility.forEach((value, i, samples) => {
-          if (i && value !== samples[i - 1]) { stops.add((i - 1) / steps); stops.add(i / steps); }
-        });
-        link.surfaceStops = [...stops].sort((a, b) => a - b).map((t) => {
-          const position = t * steps, index = Math.floor(position);
-          const samples = link.surfaceVisibility;
-          const visibility = samples[index] + ((samples[index + 1] ?? samples[index]) - samples[index]) * (position - index);
-          return { t, visibility };
-        });
-      }
-    }
     const paintLink = (link, ctx, scale, connections = true, signals = true) => {
       const source = typeof link.source === "object" ? link.source : byId.get(link.source);
       const target = typeof link.target === "object" ? link.target : byId.get(link.target);
@@ -419,15 +465,20 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
         if (brain && !active && distance > 0) {
           // Keep a visible connection at each neuron, including the silhouette,
           // while long crossings through the center remain subdued.
-          const endpointOpacity = Math.max(opacity, 0.28 * crowding);
-          const reach = Math.min(0.25, 24 / distance);
-          const connection = ctx.createLinearGradient(source.x, source.y, target.x, target.y);
-          link.surfaceStops.forEach(({ t, visibility }) => {
-            const endpoint = Math.max(0, 1 - Math.min(t, 1 - t) / reach);
-            const alpha = (opacity + (endpointOpacity - opacity) * endpoint) * visibility;
-            connection.addColorStop(t, `rgba(172, 240, 255, ${alpha})`);
-          });
-          ctx.strokeStyle = connection;
+          // Atlas endpoints and lighting are fixed. Canvas applies the current
+          // transform when painting, so this gradient also survives zoom/pan.
+          if (!link.connectionGradient) {
+            const endpointOpacity = Math.max(opacity, 0.28 * crowding);
+            const reach = Math.min(0.25, 24 / distance);
+            const connection = ctx.createLinearGradient(source.x, source.y, target.x, target.y);
+            link.surfaceStops.forEach(({ t, visibility }) => {
+              const endpoint = Math.max(0, 1 - Math.min(t, 1 - t) / reach);
+              const alpha = (opacity + (endpointOpacity - opacity) * endpoint) * visibility;
+              connection.addColorStop(t, `rgba(172, 240, 255, ${alpha})`);
+            });
+            link.connectionGradient = connection;
+          }
+          ctx.strokeStyle = link.connectionGradient;
           ctx.globalAlpha = 1;
         }
         ctx.lineWidth = (highlighted ? 1.3 : 0.75) / scale;
@@ -485,6 +536,7 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
       host.querySelector(".force-graph-container").append(motionCanvas);
       const context = motionCanvas.getContext("2d");
       const signals = links.filter((link) => link.signalPhase !== null);
+      const visibleNodes = [];
       let camera;
       let cameraScale = 1;
       drawMotion = () => {
@@ -493,8 +545,22 @@ export async function mountGraph(view, data, { brain = false, openProject } = {}
         context.clearRect(0, 0, motionCanvas.width, motionCanvas.height);
         context.setTransform(camera);
         renderPixelScale = Math.hypot(camera.a, camera.b);
+        visibleNodes.length = 0;
+        // Finish all atlas writes before any drawImage reads. Interleaving
+        // them can upload the entire texture once per cold-cache node.
+        for (const node of nodes) {
+          const r = radius(node, cameraScale);
+          const x = camera.a * node.x + camera.c * node.y + camera.e;
+          const y = camera.b * node.x + camera.d * node.y + camera.f;
+          const margin = r * renderPixelScale + 48;
+          if (node !== hovered && node !== selected &&
+              (x + margin < 0 || x - margin > motionCanvas.width || y + margin < 0 || y - margin > motionCanvas.height)) continue;
+          visibleNodes.push(node);
+          glows.prepare(r, (node.kind === "note" ? 13 : 7) + (node.pulse || 0) * 9, "#8deaff", renderPixelScale);
+        }
+        if (!motionPreference.matches) glows.prepare(2.2 / cameraScale, 18, "#79e3ff", renderPixelScale);
         for (const link of signals) paintLink(link, context, cameraScale, false, true);
-        for (const node of nodes) paint(node, context, cameraScale);
+        for (const node of visibleNodes) paint(node, context, cameraScale);
         context.globalAlpha = 1;
       };
       graph.linkCanvasObject((link, ctx, scale) => paintLink(link, ctx, scale, true, false));
